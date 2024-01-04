@@ -5,13 +5,13 @@
 import PromiseKit
 
 /** Waits on all provided promises, then resolves to the result of the successful ones.
-- Param onError: A callback that is called each time any promise fails, with the index of the
-                 promise and the error.
-- Returns: A new promise that resolves once all the provided promises resolve, containing an array
-           of the results from the successful promises.
-*/
+ - Param onError: A callback that is called each time any promise fails, with the index of the
+                  promise and the error.
+ - Returns: A new promise that resolves once all the provided promises resolve, containing an array
+            of the results from the successful promises.
+ */
 func successes<T>(_ promises: [Promise<T>], onError: @escaping (Int, Error) -> Void)
--> Promise<[T]> {
+    -> Promise<[T]> {
     guard !promises.isEmpty else { return .value([]) }
     return Promise<[T]> { seal in
         var values = [T]()

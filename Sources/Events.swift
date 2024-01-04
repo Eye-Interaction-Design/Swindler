@@ -9,12 +9,12 @@ public protocol EventType {
     var external: Bool { get }
 }
 
-internal extension EventType {
+extension EventType {
     // In a later version of Swift, this can be stored (lazily).. store as hashValue for more speed.
     // Instead of using this, we _could_ use an enum of all notifications and require each event to
     // declare a static var of its notification. That's error prone, though, and this is fast enough.
     static var typeName: String {
-        return Mirror(reflecting: Self.self).description
+        Mirror(reflecting: Self.self).description
     }
 }
 
@@ -35,6 +35,7 @@ protocol StatePropertyEventType: PropertyEventType {
     associatedtype Object = State
     init(external: Bool, state: Object, oldValue: PropertyType, newValue: PropertyType)
 }
+
 extension StatePropertyEventType {
     init(external: Bool, object: Object, oldValue: PropertyType, newValue: PropertyType) {
         self.init(external: external, state: object, oldValue: oldValue, newValue: newValue)
@@ -74,6 +75,7 @@ protocol WindowPropertyEventType: PropertyEventType {
     associatedtype Object = Window
     init(external: Bool, window: Object, oldValue: PropertyType, newValue: PropertyType)
 }
+
 extension WindowPropertyEventType {
     init(external: Bool, object: Object, oldValue: PropertyType, newValue: PropertyType) {
         self.init(external: external, window: object, oldValue: oldValue, newValue: newValue)
@@ -111,6 +113,7 @@ protocol ApplicationPropertyEventType: PropertyEventType {
     associatedtype Object = Application
     init(external: Bool, application: Object, oldValue: PropertyType, newValue: PropertyType)
 }
+
 extension ApplicationPropertyEventType {
     init(external: Bool, object: Object, oldValue: PropertyType, newValue: PropertyType) {
         self.init(external: external, application: object, oldValue: oldValue, newValue: newValue)

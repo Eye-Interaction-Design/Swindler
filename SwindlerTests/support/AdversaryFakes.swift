@@ -1,11 +1,11 @@
-@testable import Swindler
 import AXSwift
 import Foundation
+@testable import Swindler
 
 class TestObserver: ObserverType {
     typealias UIElement = TestUIElement
     typealias Context = TestObserver
-    //typealias Callback = (Context, TestUIElement, AXNotification) -> ()
+    // typealias Callback = (Context, TestUIElement, AXNotification) -> ()
 
     required init(processID: pid_t, callback: @escaping Callback) throws {}
     init() {}
@@ -19,7 +19,7 @@ class TestObserver: ObserverType {
 /// Allows defining adversarial actions when a property is observed.
 final class AdversaryObserver: FakeObserver {
     static var onNotification: AXNotification?
-    static var handler: Optional<(AdversaryObserver) -> Void> = nil
+    static var handler: ((AdversaryObserver) -> Void)? = nil
 
     /// Call this in beforeEach for any tests that use this class.
     static func reset() {
@@ -35,7 +35,8 @@ final class AdversaryObserver: FakeObserver {
     }
 
     override func addNotification(
-        _ notification: AXNotification, forElement element: TestUIElement) throws {
+        _ notification: AXNotification, forElement element: TestUIElement
+    ) throws {
         try super.addNotification(notification, forElement: element)
         if notification == AdversaryObserver.onNotification {
             performOnMainThread { AdversaryObserver.handler!(self) }
@@ -47,16 +48,16 @@ final class AdversaryObserver: FakeObserver {
 final class AdversaryApplicationElement: TestApplicationElement {
     static var allApps: [AdversaryApplicationElement] = []
     static func all() -> [AdversaryApplicationElement] {
-      return AdversaryApplicationElement.allApps
+        AdversaryApplicationElement.allApps
     }
 
-    var onRead: Optional < (AdversaryApplicationElement) -> Void> = nil
+    var onRead: ((AdversaryApplicationElement) -> Void)? = nil
     var watchAttribute: Attribute?
     var alreadyCalled = false
     var onMainThread = true
 
     init() { super.init(processID: 0) }
-    init?(forProcessID processID: pid_t) { return nil }
+    init?(forProcessID processID: pid_t) { nil }
 
     /// Defines code that runs on the main thread before returning the value of the attribute.
     func onFirstAttributeRead(_ attribute: Attribute,
@@ -91,6 +92,7 @@ final class AdversaryApplicationElement: TestApplicationElement {
         }
         return result
     }
+
     override func arrayAttribute<T>(_ attribute: Attribute) throws -> [T]? {
         let result: [T]? = try super.arrayAttribute(attribute)
         if attribute == watchAttribute {
@@ -98,10 +100,11 @@ final class AdversaryApplicationElement: TestApplicationElement {
         }
         return result
     }
+
     override func getMultipleAttributes(_ attributes: [AXSwift.Attribute])
         throws -> [Attribute: Any] {
         let result: [Attribute: Any] = try super.getMultipleAttributes(attributes)
-        if let watchAttribute = watchAttribute, attributes.contains(watchAttribute) {
+        if let watchAttribute, attributes.contains(watchAttribute) {
             handleAttributeRead()
         }
         return result
@@ -110,7 +113,7 @@ final class AdversaryApplicationElement: TestApplicationElement {
 
 /// Allows defining adversarial actions when an attribute is read.
 class AdversaryWindowElement: TestWindowElement {
-    var onRead: Optional<() -> Void> = nil
+    var onRead: (() -> Void)? = nil
     var watchAttribute: Attribute?
     var alreadyCalled = false
 
@@ -133,10 +136,11 @@ class AdversaryWindowElement: TestWindowElement {
         }
         return result
     }
+
     override func getMultipleAttributes(_ attributes: [AXSwift.Attribute])
         throws -> [Attribute: Any] {
         let result: [Attribute: Any] = try super.getMultipleAttributes(attributes)
-        if let watchAttribute = watchAttribute, attributes.contains(watchAttribute) {
+        if let watchAttribute, attributes.contains(watchAttribute) {
             performOnMainThread {
                 if !self.alreadyCalled {
                     self.onRead?()

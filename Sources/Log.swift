@@ -4,15 +4,16 @@ import os
 public var SWINDLER_LOGGER: OSLog?
 
 /// Internal logger.
-internal private(set) var log = Log()
+private(set) var log = Log()
 
 private let COLOR_ENABLED = (ProcessInfo().environment["SWINDLER_COLOR"] == "1")
 
 struct StderrOutputStream: TextOutputStream {
-  public mutating func write(_ string: String) {
-    fputs(string, stderr)
-  }
+    public mutating func write(_ string: String) {
+        fputs(string, stderr)
+    }
 }
+
 var stderrStream = StderrOutputStream()
 
 /// Internal logging methods.
@@ -30,6 +31,7 @@ struct Log {
     func error(_ out: @autoclosure () -> String) {
         log(out(), level: .error, withColor: .red)
     }
+
     /// Log that something is amiss which might result in a failure.
     func warn(_ out: @autoclosure () -> String) {
         log(out(), level: .warn, withColor: .yellow)
@@ -42,23 +44,23 @@ struct Log {
 
     /// Log something purely informational (not visible in production).
     func info(_ out: @autoclosure () -> String) {
-//#if SWINDLER_DEBUG
+        // #if SWINDLER_DEBUG
         log(out(), level: .info, withColor: .cyan)
-//#endif
+        // #endif
     }
 
     /// Log debug info (not visible in production).
     func debug(_ out: @autoclosure () -> String) {
-#if SWINDLER_DEBUG
-        log(out(), level: .debug, withColor: .blue)
-#endif
+        #if SWINDLER_DEBUG
+            log(out(), level: .debug, withColor: .blue)
+        #endif
     }
 
     /// Log more verbose debug info (usually not visible in production or development).
     func trace(_ out: @autoclosure () -> String) {
-#if SWINDLER_TRACE
-        log(out(), level: .trace, withColor: Color.gray)
-#endif
+        #if SWINDLER_TRACE
+            log(out(), level: .trace, withColor: Color.gray)
+        #endif
     }
 
     enum Color: Int8 {
@@ -74,14 +76,13 @@ struct Log {
     // Log on the given log level, using the given color if XcodeColors is enabled.
     fileprivate func log(_ string: String, level: Level, withColor: Color? = nil) {
         if let logger = SWINDLER_LOGGER {
-            var type: OSLogType?
-            switch level {
-                case .debug: type = .debug
-                case .error: type = .error
-                case .info: type = .info
-                case .notice: type = .default
-                case .trace: type = .debug
-                case .warn: type = .default
+            var type: OSLogType? = switch level {
+            case .debug: .debug
+            case .error: .error
+            case .info: .info
+            case .notice: .default
+            case .trace: .debug
+            case .warn: .default
             }
             os_log("%{public}@", log: logger, type: type!, string)
         } else {
@@ -99,5 +100,4 @@ struct Log {
             print(output)
         }
     }
-
 }

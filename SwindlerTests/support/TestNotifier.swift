@@ -5,16 +5,17 @@ import Nimble
 class TestNotifier: EventNotifier {
     var events: [EventType] = []
 
-    override func notify<Event: EventType>(_ event: Event) {
+    override func notify(_ event: some EventType) {
         events.append(event)
         super.notify(event)
     }
 
     func getEventsOfType<T: EventType>(_ type: T.Type) -> [T] {
-        return events.compactMap({ $0 as? T })
+        events.compactMap { $0 as? T }
     }
+
     func getEventOfType<T: EventType>(_ type: T.Type) -> T? {
-        return getEventsOfType(type).first
+        getEventsOfType(type).first
     }
 
     @discardableResult
@@ -26,7 +27,7 @@ class TestNotifier: EventNotifier {
 
     @discardableResult
     func waitUntilEvent<T: EventType>(_ type: T.Type, file: FileString = #file, line: UInt = #line)
-    -> T? {
+        -> T? {
         var event: T?
         func getEvent() -> Bool {
             event = getEventOfType(type)

@@ -48,13 +48,13 @@ class Attributes {
 
 extension Attributes: CustomDebugStringConvertible {
     var debugDescription: String {
-        return "\(values)"
+        "\(values)"
     }
 }
 
 class SyncAttributes {
-    private var attrs: Attributes = Attributes()
-    private var lock: NSRecursiveLock = NSRecursiveLock()
+    private var attrs: Attributes = .init()
+    private var lock: NSRecursiveLock = .init()
 
     func with<R>(_ f: (Attributes) -> R) -> R {
         lock.lock()
@@ -63,12 +63,12 @@ class SyncAttributes {
     }
 
     subscript(attr: Attribute) -> Any? {
-        get { return with({ $0[attr] }) }
-        set { with({ $0[attr] = newValue }) }
+        get { with { $0[attr] } }
+        set { with { $0[attr] = newValue } }
     }
 
     func removeValue(forKey attr: Attribute) {
-        with({ $0.removeValue(forKey: attr) })
+        with { $0.removeValue(forKey: attr) }
     }
 }
 
@@ -87,7 +87,7 @@ class TestUIElement: UIElementType, Hashable {
 
     var id: Int
     var processID: pid_t = 0
-    var attrs: SyncAttributes = SyncAttributes()
+    var attrs: SyncAttributes = .init()
 
     var throwInvalid: Bool = false
 
@@ -100,7 +100,7 @@ class TestUIElement: UIElementType, Hashable {
         hasher.combine(id)
     }
 
-    func pid() throws -> pid_t { return processID }
+    func pid() throws -> pid_t { processID }
     func attribute<T>(_ attr: Attribute) throws -> T? {
         if throwInvalid { throw AXError.invalidUIElement }
         if let value = attrs[attr] {
@@ -108,6 +108,7 @@ class TestUIElement: UIElementType, Hashable {
         }
         return nil
     }
+
     func arrayAttribute<T>(_ attr: Attribute) throws -> [T]? {
         if throwInvalid { throw AXError.invalidUIElement }
         guard let value = attrs[attr] else {
@@ -115,6 +116,7 @@ class TestUIElement: UIElementType, Hashable {
         }
         return (value as! [T])
     }
+
     func getMultipleAttributes(_ attributes: [AXSwift.Attribute]) throws -> [Attribute: Any] {
         if throwInvalid { throw AXError.invalidUIElement }
         return attrs.with { attrs in
@@ -125,35 +127,37 @@ class TestUIElement: UIElementType, Hashable {
             return result
         }
     }
+
     func setAttribute(_ attr: Attribute, value: Any) throws {
         if throwInvalid { throw AXError.invalidUIElement }
         attrs[attr] = value
     }
 
-    func addObserver(_: FakeObserver) { }
+    func addObserver(_: FakeObserver) {}
 
     var inspect: String {
         let role = attrs[.role] ?? "UIElement"
         return "\(role) (id \(id))"
     }
 }
-func ==(lhs: TestUIElement, rhs: TestUIElement) -> Bool {
-    return lhs.id == rhs.id
+
+func == (lhs: TestUIElement, rhs: TestUIElement) -> Bool {
+    lhs.id == rhs.id
 }
 
 class TestApplicationElement: TestUIElement, ApplicationElementType {
     typealias UIElementType = TestUIElement
-    var toElement: TestUIElement { return self }
+    var toElement: TestUIElement { self }
 
     init(processID: pid_t? = nil, id: Int? = nil) {
         super.init()
-        if let id = id {
+        if let id {
             self.id = id
         }
         self.processID = processID ?? Int32(self.id)
         attrs.with { attrs in
             attrs[.role] = AXSwift.Role.application.rawValue
-            attrs[.windows] = Array<TestUIElement>()
+            attrs[.windows] = [TestUIElement]()
             attrs[.frontmost] = false
             attrs[.hidden] = false
         }
@@ -186,8 +190,8 @@ class TestApplicationElement: TestUIElement, ApplicationElementType {
         try super.setAttribute(attribute, value: newValue)
     }
 
-    internal var windows: [TestUIElement] {
-        get { return attrs[.windows]! as! [TestUIElement] }
+    var windows: [TestUIElement] {
+        get { attrs[.windows]! as! [TestUIElement] }
         set { attrs[.windows] = newValue }
     }
 }
@@ -198,6 +202,7 @@ final class EmittingTestApplicationElement: TestApplicationElement {
         super.init(processID: EmittingTestApplicationElement.nextPID)
         EmittingTestApplicationElement.nextPID += 1
     }
+
     static var nextPID: pid_t = 1
 
     override func setAttribute(_ attribute: Attribute, value: Any) throws {
@@ -205,13 +210,13 @@ final class EmittingTestApplicationElement: TestApplicationElement {
         let notifications = { () -> [AXNotification] in
             switch attribute {
             case .mainWindow:
-                return [.mainWindowChanged, .focusedWindowChanged]
+                [.mainWindowChanged, .focusedWindowChanged]
             case .focusedWindow:
-                return [.focusedWindowChanged]
+                [.focusedWindowChanged]
             case .hidden:
-                return (value as? Bool == true) ? [.applicationHidden] : [.applicationShown]
+                (value as? Bool == true) ? [.applicationHidden] : [.applicationShown]
             default:
-                return []
+                []
             }
         }()
         for notification in notifications {
@@ -272,7 +277,7 @@ class TestWindowElement: TestUIElement {
 
 extension TestWindowElement: CustomDebugStringConvertible {
     var debugDescription: String {
-        let title = self.attrs[.title].map{"\"\($0)\""}
+        let title = self.attrs[.title].map { "\"\($0)\"" }
         return "TestWindowElement(\(title ?? "<none>"))"
     }
 }
@@ -287,15 +292,15 @@ class EmittingTestWindowElement: TestWindowElement {
         try super.setAttribute(attribute, value: value)
         let notifications = { () -> [AXNotification] in
             switch attribute {
-            case .position:   return [.moved]
-            case .size:       return [.resized]
-            case .frame:      return [.moved, .resized]
-            case .fullScreen: return [.resized]
-            case .title:      return [.titleChanged]
+            case .position: [.moved]
+            case .size: [.resized]
+            case .frame: [.moved, .resized]
+            case .fullScreen: [.resized]
+            case .title: [.titleChanged]
             case .minimized:
-                return (value as? Bool == true) ? [.windowDeminiaturized] : [.windowMiniaturized]
+                (value as? Bool == true) ? [.windowDeminiaturized] : [.windowMiniaturized]
             default:
-                return []
+                []
             }
         }()
         for notification in notifications {
@@ -325,7 +330,7 @@ class FakeObserver: ObserverType {
     typealias Context = FakeObserver
     typealias UIElement = TestUIElement
     var callback: Callback!
-    var lock: NSLock = NSLock()
+    var lock: NSLock = .init()
     var watchedElements: [TestUIElement: [AXNotification]] = [:]
 
     required init(processID: pid_t, callback: @escaping Callback) throws {
@@ -385,7 +390,7 @@ class FakeObserver: ObserverType {
 // This component is not actually part of AXSwift.
 class FakeApplicationObserver: ApplicationObserverType {
     private var frontmost_: pid_t?
-    var frontmostApplicationPID: pid_t? { return frontmost_ }
+    var frontmostApplicationPID: pid_t? { frontmost_ }
 
     private var frontmostHandlers: [() -> Void] = []
     func onFrontmostApplicationChanged(_ handler: @escaping () -> Void) {
@@ -416,10 +421,11 @@ class FakeApplicationObserver: ApplicationObserverType {
     typealias ApplicationElement = EmittingTestApplicationElement
     var allApps: [ApplicationElement] = []
     func allApplications() -> [EmittingTestApplicationElement] {
-        return allApps
+        allApps
     }
+
     func appElement(forProcessID processID: pid_t) -> EmittingTestApplicationElement? {
-        return allApps.first(where: {$0.processID == processID})
+        allApps.first(where: { $0.processID == processID })
     }
 }
 
@@ -428,15 +434,17 @@ extension FakeApplicationObserver {
         frontmost_ = pid
         frontmostHandlers.forEach { $0() }
     }
+
     func launch(_ pid: pid_t) {
         launchHandlers.forEach { $0(pid) }
     }
+
     func terminate(_ pid: pid_t) {
         terminateHandlers.forEach { $0(pid) }
     }
 }
 
-final private class WeakBox<A: AnyObject> {
+private final class WeakBox<A: AnyObject> {
     weak var unbox: A?
     init(_ value: A) {
         unbox = value

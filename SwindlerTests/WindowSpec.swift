@@ -1,10 +1,10 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 // The window delegate holds a weak reference to the app delegate, so we use this singleton to
 // ensure it doesn't get destroyed. Same for app -> state. See #3.
@@ -12,7 +12,6 @@ private let stubApplicationDelegate = StubApplicationDelegate()
 
 class OSXWindowDelegateInitializeSpec: QuickSpec {
     override func spec() {
-
         typealias WinDelegate = OSXWindowDelegate<
             TestUIElement, TestApplicationElement, TestObserver
         >
@@ -33,7 +32,7 @@ class OSXWindowDelegateInitializeSpec: QuickSpec {
         }
 
         func initialize() -> Promise<WinDelegate> {
-            return initializeWithElement(windowElement)
+            initializeWithElement(windowElement)
         }
 
         it("doesn't leak memory") {
@@ -48,7 +47,6 @@ class OSXWindowDelegateInitializeSpec: QuickSpec {
         }
 
         describe("initialize") {
-
             it("initializes window properties") { () -> Promise<Void> in
                 windowElement.attrs[.position] = CGPoint(x: 5, y: 5)
                 windowElement.attrs[.size] = CGSize(width: 100, height: 100)
@@ -99,11 +97,9 @@ class OSXWindowDelegateInitializeSpec: QuickSpec {
                     return expectToFail(initialize())
                 }
             }
-
         }
 
         describe("Window equality") {
-
             it("returns true for identical WindowDelegates") { () -> Promise<Void> in
                 initialize().done { windowDelegate in
                     expect(Window(delegate: windowDelegate))
@@ -120,15 +116,12 @@ class OSXWindowDelegateInitializeSpec: QuickSpec {
                     }
                 }
             }
-
         }
-
     }
 }
 
 class OSXWindowDelegateNotificationSpec: QuickSpec {
     override func spec() {
-
         describe("AXUIElement notifications") {
             beforeEach { AdversaryObserver.reset() }
 
@@ -152,15 +145,15 @@ class OSXWindowDelegateNotificationSpec: QuickSpec {
             }
 
             func initialize() -> Promise<WinDelegate> {
-                return AppDelegate
+                AppDelegate
                     .initialize(axElement: appElement,
                                 stateDelegate: StubStateDelegate(),
                                 notifier: TestNotifier())
                     .map { appDelegate -> WinDelegate in
                         guard let winDelegate = appDelegate.knownWindows.first
-                                                as! WinDelegate? else {
+                            as! WinDelegate? else {
                             throw TestError("Window delegate was not initialized by application "
-                                          + "delegate")
+                                + "delegate")
                         }
                         return winDelegate
                     }
@@ -217,15 +210,12 @@ class OSXWindowDelegateNotificationSpec: QuickSpec {
                     }
                 }
             }
-
         }
-
     }
 }
 
 class OSXWindowDelegateSpec: QuickSpec {
     override func spec() {
-
         typealias WinDelegate = OSXWindowDelegate<
             TestUIElement, TestApplicationElement, TestObserver
         >
@@ -236,8 +226,8 @@ class OSXWindowDelegateSpec: QuickSpec {
         beforeEach {
             windowElement = TestWindowElement(forApp: TestApplicationElement())
             windowElement.attrs[.position] = CGPoint(x: 0, y: 0)
-            windowElement.attrs[.size]     = CGSize(width: 100, height: 100)
-            windowElement.attrs[.title]    = "a window"
+            windowElement.attrs[.size] = CGSize(width: 100, height: 100)
+            windowElement.attrs[.title] = "a window"
 
             notifier = TestNotifier()
             waitUntil { done in
@@ -257,7 +247,7 @@ class OSXWindowDelegateSpec: QuickSpec {
         }
 
         func getWindowElement(_ window: Window?) -> TestUIElement? {
-            return ((window?.delegate) as! WinDelegate?)?.axElement
+            ((window?.delegate) as! WinDelegate?)?.axElement
         }
 
         context("when a window is destroyed") {
@@ -348,7 +338,7 @@ class OSXWindowDelegateSpec: QuickSpec {
 
         describe("frame and size sync") {
             it("immediately updates size when frame is set") { () -> Promise<Void> in
-                return windowDelegate
+                windowDelegate
                     .frame
                     .set(CGRect(x: 500, y: 500, width: 200, height: 200))
                     .done { _ in
@@ -357,7 +347,7 @@ class OSXWindowDelegateSpec: QuickSpec {
             }
 
             it("immediately updates frame when size is set") { () -> Promise<Void> in
-                return windowDelegate
+                windowDelegate
                     .size
                     .set(CGSize(width: 200, height: 200))
                     .done { _ in
@@ -385,18 +375,18 @@ class OSXWindowDelegateSpec: QuickSpec {
 
                 it("updates when the window is resized from the top") {
                     windowElement.attrs[.position] = CGPoint(x: 0, y: 25)
-                    windowElement.attrs[.size]     = CGSize(width: 100, height: 75)
+                    windowElement.attrs[.size] = CGSize(width: 100, height: 75)
                     // Somewhat surprisingly, no .moved event is produced when this happens.
                     windowDelegate.handleEvent(.resized, observer: TestObserver())
                     expect(windowDelegate.size.value).toEventually(equal(
                         CGSize(width: 100, height: 75)))
                     expect(windowDelegate.frame.value.origin).toEventually(equal(
-                        CGPoint(x: 0, y: 900)))  // no change
+                        CGPoint(x: 0, y: 900))) // no change
                 }
 
                 it("updates when the window is resized from the bottom") {
                     windowElement.attrs[.position] = CGPoint(x: 0, y: 0)
-                    windowElement.attrs[.size]     = CGSize(width: 100, height: 75)
+                    windowElement.attrs[.size] = CGSize(width: 100, height: 75)
                     windowDelegate.handleEvent(.resized, observer: TestObserver())
                     expect(windowDelegate.frame.value.origin).toEventually(equal(
                         CGPoint(x: 0, y: 925)))
@@ -417,7 +407,7 @@ class OSXWindowDelegateSpec: QuickSpec {
 
                 it("updates when the window is resized from the top") {
                     windowElement.attrs[.position] = CGPoint(x: 0, y: 25)
-                    windowElement.attrs[.size]     = CGSize(width: 100, height: 75)
+                    windowElement.attrs[.size] = CGSize(width: 100, height: 75)
                     // Somewhat surprisingly, no .moved event is produced when this happens.
                     windowDelegate.handleEvent(.resized, observer: TestObserver())
                     expect(windowDelegate.frame.value).toEventually(equal(
@@ -426,7 +416,7 @@ class OSXWindowDelegateSpec: QuickSpec {
 
                 it("updates when the window is resized from the bottom") {
                     windowElement.attrs[.position] = CGPoint(x: 0, y: 0)
-                    windowElement.attrs[.size]     = CGSize(width: 100, height: 75)
+                    windowElement.attrs[.size] = CGSize(width: 100, height: 75)
                     windowDelegate.handleEvent(.resized, observer: TestObserver())
                     expect(windowDelegate.frame.value).toEventually(equal(
                         CGRect(x: 0, y: 925, width: 100, height: 75)))
@@ -462,13 +452,11 @@ class OSXWindowDelegateSpec: QuickSpec {
                 }
             }
         }
-
     }
 }
 
 class WindowSpec: QuickSpec {
     override func spec() {
-
         var state: State!
         var stateDelegate: StubStateDelegate!
         var window: Window!
@@ -537,6 +525,5 @@ class WindowSpec: QuickSpec {
                 }
             }
         }
-
     }
 }

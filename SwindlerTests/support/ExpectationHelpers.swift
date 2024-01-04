@@ -1,7 +1,7 @@
 import Foundation
-import Quick
 import Nimble
 import PromiseKit
+import Quick
 
 func waitUntil(_ expression: @autoclosure @escaping () throws -> Bool,
                file: FileString = #file,
@@ -22,12 +22,12 @@ func waitFor<T>(_ expression: @autoclosure @escaping () throws -> T?,
     }
 }
 
-func it<T>(_ desc: String,
-           timeout: TimeInterval = 1.0,
-           failOnError: Bool = true,
-           file: FileString = #file,
-           line: UInt = #line,
-           closure: @escaping () -> Promise<T>) {
+func it(_ desc: String,
+        timeout: TimeInterval = 1.0,
+        failOnError: Bool = true,
+        file: FileString = #file,
+        line: UInt = #line,
+        closure: @escaping () -> Promise<some Any>) {
     it(desc, file: file, line: line, closure: {
         let promise = closure()
         waitUntil(timeout: timeout, file: file, line: line) { done in
@@ -43,16 +43,16 @@ func it<T>(_ desc: String,
     } as () -> Void)
 }
 
-func expectToSucceed<T>(_ promise: Promise<T>, file: FileString = #file, line: UInt = #line)
--> Promise<Void> {
-    return promise.asVoid().recover { (error: Error) -> Void in
+func expectToSucceed(_ promise: Promise<some Any>, file: FileString = #file, line: UInt = #line)
+    -> Promise<Void> {
+    promise.asVoid().recover { (error: Error) in
         fail("Expected promise to succeed, but failed with \(error)", file: file, line: line)
     }
 }
 
-func expectToFail<T>(_ promise: Promise<T>, file: FileString = #file, line: UInt = #line)
--> Promise<Void> {
-    return promise.asVoid().done {
+func expectToFail(_ promise: Promise<some Any>, file: FileString = #file, line: UInt = #line)
+    -> Promise<Void> {
+    promise.asVoid().done {
         fail("Expected promise to fail, but succeeded", file: file, line: line)
     }.recover { (error: Error) -> Promise<Void> in
         expect(file, line: line, expression: { throw error }).to(throwError())
@@ -60,14 +60,14 @@ func expectToFail<T>(_ promise: Promise<T>, file: FileString = #file, line: UInt
     }
 }
 
-func expectToFail<T, E: Error>(_ promise: Promise<T>,
-                               with expectedError: E,
-                               file: FileString = #file,
-                               line: UInt = #line) -> Promise<Void> {
-    return promise.asVoid().done {
+func expectToFail(_ promise: Promise<some Any>,
+                  with expectedError: some Error,
+                  file: FileString = #file,
+                  line: UInt = #line) -> Promise<Void> {
+    promise.asVoid().done {
         fail("Expected promise to fail with error \(expectedError), but succeeded",
              file: file, line: line)
-    }.recover { (error: Error) -> Void in
+    }.recover { (error: Error) in
         expect(file, line: line, expression: { throw error }).to(throwError(expectedError))
     }
 }

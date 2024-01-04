@@ -6,11 +6,11 @@ class StubStateDelegate: StateDelegate {
     var runningApplications: [ApplicationDelegate] = []
     var frontmostApplication: WriteableProperty<OfOptionalType<Swindler.Application>>!
     var knownWindows: [WindowDelegate] = []
-    var systemScreens: SystemScreenDelegate { return fakeScreens }
-    var notifier: EventNotifier = EventNotifier()
+    var systemScreens: SystemScreenDelegate { fakeScreens }
+    var notifier: EventNotifier = .init()
     var currentSpaceId: [Int] = [0]
 
-    var fakeScreens: FakeSystemScreenDelegate = FakeSystemScreenDelegate(screens: [])
+    var fakeScreens: FakeSystemScreenDelegate = .init(screens: [])
 }
 
 class StubApplicationDelegate: ApplicationDelegate {
@@ -26,7 +26,7 @@ class StubApplicationDelegate: ApplicationDelegate {
     var isFrontmost: WriteableProperty<OfType<Bool>>!
     var isHidden: WriteableProperty<OfType<Bool>>!
 
-    func equalTo(_ other: ApplicationDelegate) -> Bool { return self === other }
+    func equalTo(_ other: ApplicationDelegate) -> Bool { self === other }
 }
 
 class StubWindowDelegate: WindowDelegate {
@@ -51,12 +51,12 @@ class StubWindowDelegate: WindowDelegate {
         size = SizeProperty(size_, notifier: notifier, frame: frame)
     }
 
-    func equalTo(_ other: WindowDelegate) -> Bool { return self === other }
+    func equalTo(_ other: WindowDelegate) -> Bool { self === other }
 }
 
 class StubScreenDelegate: ScreenDelegate {
-    var frame: CGRect = CGRect.zero
-    var applicationFrame: CGRect = CGRect.zero
+    var frame: CGRect = .zero
+    var applicationFrame: CGRect = .zero
     var spaceId: Int?
 
     init() {}
@@ -65,11 +65,11 @@ class StubScreenDelegate: ScreenDelegate {
         applicationFrame = frame
     }
 
-    var debugDescription: String { return "StubScreenDelegate" }
+    var debugDescription: String { "StubScreenDelegate" }
 
     var native: NSScreen? { nil }
 
-    func equalTo(_ other: ScreenDelegate) -> Bool { return self === other }
+    func equalTo(_ other: ScreenDelegate) -> Bool { self === other }
     func hash(into hasher: inout Hasher) {}
 }
 
@@ -94,6 +94,6 @@ class StubPropertyDelegate<T: Equatable>: PropertyDelegate {
     }
 
     func initialize() -> Promise<T?> {
-        return Promise.value(value)
+        Promise.value(value)
     }
 }

@@ -16,6 +16,7 @@ protocol UIElementType: Equatable {
 
     var inspect: String { get }
 }
+
 extension AXSwift.UIElement: UIElementType {}
 
 /// Protocol that wraps AXSwift.Observer.
@@ -29,6 +30,7 @@ protocol ObserverType {
     func addNotification(_ notification: AXSwift.AXNotification, forElement: UIElement) throws
     func removeNotification(_ notification: AXSwift.AXNotification, forElement: UIElement) throws
 }
+
 extension AXSwift.Observer: ObserverType {
     typealias UIElement = AXSwift.UIElement
     typealias Context = AXSwift.Observer
@@ -41,7 +43,8 @@ protocol ApplicationElementType: UIElementType {
     // Until the Swift type system improves, I don't see a way around this.
     var toElement: UIElement { get }
 }
+
 extension AXSwift.Application: ApplicationElementType {
     typealias UIElement = AXSwift.UIElement
-    var toElement: UIElement { return self }
+    var toElement: UIElement { self }
 }

@@ -1,10 +1,10 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 private class TestPropertyDelegate<T: Equatable>: PropertyDelegate {
     var systemValue: T?
@@ -12,12 +12,15 @@ private class TestPropertyDelegate<T: Equatable>: PropertyDelegate {
     init(value: T?) {
         systemValue = value
     }
+
     func initialize() -> Promise<T?> {
-        return Promise.value(systemValue)
+        Promise.value(systemValue)
     }
+
     func readValue() throws -> T? {
-        return systemValue
+        systemValue
     }
+
     func writeValue(_ newValue: T) throws {
         systemValue = newValue
     }
@@ -33,6 +36,7 @@ class TestPropertyNotifier: PropertyNotifier {
         var oldValue: Any
         var newValue: Any
     }
+
     var events: [Event] = []
     var stillValid = true
 
@@ -46,6 +50,7 @@ class TestPropertyNotifier: PropertyNotifier {
             Event(type: event, external: external, oldValue: oldValue, newValue: newValue)
         )
     }
+
     func notifyInvalid() {
         stillValid = false
     }
@@ -53,13 +58,12 @@ class TestPropertyNotifier: PropertyNotifier {
 
 class PropertySpec: QuickSpec {
     override func spec() {
-
         // Set up a frame property on a test AX window.
         var windowElement: TestWindowElement!
         var notifier: TestPropertyNotifier!
 
         func setUpWithAttributes(_ attrs: [AXSwift.Attribute: Any])
-        -> WriteableProperty<OfType<CGRect>> {
+            -> WriteableProperty<OfType<CGRect>> {
             windowElement = TestWindowElement(forApp: TestApplicationElement())
             for (attr, value) in attrs {
                 windowElement.attrs[attr] = value
@@ -73,7 +77,8 @@ class PropertySpec: QuickSpec {
                 delegate,
                 withEvent: WindowFrameChangedEvent.self,
                 receivingObject: Window.self,
-                notifier: notifier)
+                notifier: notifier
+            )
         }
 
         let firstFrame = CGRect(x: 5, y: 5, width: 20, height: 50)
@@ -94,7 +99,6 @@ class PropertySpec: QuickSpec {
         }
 
         describe("initialization") {
-
             it("doesn't leak") {
                 weak var property = setUpWithAttributes([.frame: firstFrame])
                 waitUntil { done in
@@ -108,7 +112,6 @@ class PropertySpec: QuickSpec {
             }
 
             context("when a non-optional attribute is missing") {
-
                 it("reports an error") { () -> Promise<Void> in
                     property = setUpWithAttributes([:])
                     let expectedError = PropertyError.invalidObject(
@@ -123,11 +126,9 @@ class PropertySpec: QuickSpec {
                         expect(notifier.stillValid).to(beFalse())
                     }
                 }
-
             }
 
             context("when an optional attribute is missing") {
-
                 var optProperty: WriteableProperty<OfOptionalType<CGRect>>!
                 beforeEach {
                     let initPromise = Promise<[AXSwift.Attribute: Any]>.value([:])
@@ -138,15 +139,14 @@ class PropertySpec: QuickSpec {
                 }
 
                 it("reports no error") { () -> Promise<Void> in
-                    return optProperty.initialized
+                    optProperty.initialized
                 }
 
                 it("does not mark the object as invalid") { () -> Promise<Void> in
-                    return optProperty.initialized.done {
+                    optProperty.initialized.done {
                         expect(notifier.stillValid).to(beTrue())
                     }
                 }
-
             }
         }
 
@@ -187,11 +187,9 @@ class PropertySpec: QuickSpec {
                         }
                     }
                 }
-
             }
 
             context("when the attribute has not changed") {
-
                 it("resolves to the correct value") {
                     property.refresh().done { newValue in
                         expect(newValue).to(equal(firstFrame))
@@ -203,11 +201,9 @@ class PropertySpec: QuickSpec {
                         expect(notifier.events.count).to(equal(0))
                     }
                 }
-
             }
 
             context("when a non-optional attribute is missing") {
-
                 it("reports an error") { () -> Promise<Void> in
                     windowElement.attrs.removeValue(forKey: .frame)
                     let expectedError = PropertyError.invalidObject(
@@ -222,7 +218,6 @@ class PropertySpec: QuickSpec {
                         expect(notifier.stillValid).to(beFalse())
                     }
                 }
-
             }
 
             context("when an optional attribute is missing") {
@@ -244,11 +239,10 @@ class PropertySpec: QuickSpec {
                 }
 
                 it("does not mark the object as invalid") { () -> Promise<Void> in
-                    return optProperty.initialized.done {
+                    optProperty.initialized.done {
                         expect(notifier.stillValid).to(beTrue())
                     }
                 }
-
             }
 
             context("when the window element becomes invalid") {
@@ -258,8 +252,7 @@ class PropertySpec: QuickSpec {
 
                 it("returns an error") {
                     expectToFail(property.refresh(), with: PropertyError.invalidObject(
-                        cause: AXError.invalidUIElement)
-                    )
+                        cause: AXError.invalidUIElement))
                 }
 
                 it("calls notifier.notifyInvalid()", failOnError: false) {
@@ -279,11 +272,9 @@ class PropertySpec: QuickSpec {
                         expect(notifier.events.count).to(equal(0))
                     }
                 }
-
             }
 
             context("when called before the property is initialized") {
-
                 var initPromiseSeal: Resolver<[AXSwift.Attribute: Any]>!
                 beforeEach {
                     let (initPromise, seal) = Promise<[AXSwift.Attribute: Any]>.pending()
@@ -295,10 +286,11 @@ class PropertySpec: QuickSpec {
                         delegate,
                         withEvent: WindowFrameChangedEvent.self,
                         receivingObject: Window.self,
-                        notifier: notifier)
+                        notifier: notifier
+                    )
                 }
 
-                it("doesn't crash") { () -> Void in
+                it("doesn't crash") { () in
                     property.refresh()
                 }
 
@@ -312,12 +304,10 @@ class PropertySpec: QuickSpec {
                     initPromiseSeal.fulfill([.frame: firstFrame])
                     return promise
                 }
-
             }
         }
 
         describe("set") {
-
             it("eventually updates the property value") {
                 property.set(secondFrame).cauterize()
                 expect(property.value).toEventually(equal(secondFrame))
@@ -383,6 +373,7 @@ class PropertySpec: QuickSpec {
                         self.setTo = setTo
                         super.init(value: value)
                     }
+
                     override func writeValue(_ newValue: CGRect?) throws {
                         systemValue = setTo
                     }
@@ -392,10 +383,11 @@ class PropertySpec: QuickSpec {
                 func initPropertyWithDelegate(_ delegate_: MyPropertyDelegate) {
                     delegate = delegate_
                     property = WriteableProperty(
-                            delegate,
-                            withEvent: WindowFrameChangedEvent.self,
-                            receivingObject: Window.self,
-                            notifier: notifier)
+                        delegate,
+                        withEvent: WindowFrameChangedEvent.self,
+                        receivingObject: Window.self,
+                        notifier: notifier
+                    )
                     finishPropertyInit()
                 }
 
@@ -418,7 +410,6 @@ class PropertySpec: QuickSpec {
                             expect(notifier.events.count).to(equal(0))
                         }
                     }
-
                 }
 
                 context("changes to a different value than the one requested") {
@@ -430,14 +421,14 @@ class PropertySpec: QuickSpec {
                     }
 
                     it("reports the actual value") {
-                        return property.set(secondFrame).done { newValue in
+                        property.set(secondFrame).done { newValue in
                             expect(newValue).to(equal(resultingFrame))
                             expect(property.value).to(equal(resultingFrame))
                         }
                     }
 
                     it("emits a ChangedEvent with the actual value") {
-                        return property.set(secondFrame).done { _ in
+                        property.set(secondFrame).done { _ in
                             expect(notifier.events.count).to(equal(1))
                             if let event = notifier.events.first {
                                 expect(event.oldValue as? CGRect).to(equal(firstFrame))
@@ -447,13 +438,12 @@ class PropertySpec: QuickSpec {
                     }
 
                     it("marks the event as internal") {
-                        return property.set(secondFrame).done { _ in
+                        property.set(secondFrame).done { _ in
                             if let event = notifier.events.first {
                                 expect(event.external).to(beFalse())
                             }
                         }
                     }
-
                 }
             }
 
@@ -466,6 +456,7 @@ class PropertySpec: QuickSpec {
                         self.onWrite = onWrite
                         super.init(value: value)
                     }
+
                     override func writeValue(_ newValue: T?) throws {
                         systemValue = newValue
                         onWrite()
@@ -482,24 +473,24 @@ class PropertySpec: QuickSpec {
                         delegate,
                         withEvent: WindowFrameChangedEvent.self,
                         receivingObject: Window.self,
-                        notifier: notifier)
+                        notifier: notifier
+                    )
                     finishPropertyInit()
                 }
 
                 it("only emits one event") {
-                    return property.set(secondFrame).done { _ in
+                    property.set(secondFrame).done { _ in
                         expect(notifier.events.count).to(equal(1))
                     }
                 }
 
                 it("marks the event as internal") {
-                    return property.set(secondFrame).done { _ in
+                    property.set(secondFrame).done { _ in
                         if let event = notifier.events.first {
                             expect(event.external).to(beFalse())
                         }
                     }
                 }
-
             }
 
             context("when the window element becomes invalid") {
@@ -531,9 +522,7 @@ class PropertySpec: QuickSpec {
                         expect(notifier.events.count).to(equal(0))
                     }
                 }
-
             }
         }
-
     }
 }

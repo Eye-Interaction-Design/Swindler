@@ -1,7 +1,7 @@
-import Foundation
 import AXSwift
-import PromiseKit
 import Cocoa
+import Foundation
+import PromiseKit
 
 /// Implements PropertyDelegate using the AXUIElement API.
 class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelegate {
@@ -17,7 +17,7 @@ class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelega
     }
 
     func readFilter(_ value: T?) -> T? {
-        return value
+        value
     }
 
     func readValue() throws -> T? {
@@ -35,12 +35,12 @@ class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelega
             throw PropertyError.timeout(time: TimeInterval(time))
         } catch AXError.invalidUIElement {
             log.debug("Got invalidUIElement for element \(axElement) "
-                    + "when attempting to read \(attribute)")
+                + "when attempting to read \(attribute)")
             throw PropertyError.invalidObject(cause: AXError.invalidUIElement)
-        } catch let error {
+        } catch {
             log.warn("Got unexpected error for element \(axElement) "
-                    + "when attempting to read \(attribute)")
-            //unexpectedError(error)
+                + "when attempting to read \(attribute)")
+            // unexpectedError(error)
             throw PropertyError.invalidObject(cause: error)
         }
     }
@@ -63,16 +63,16 @@ class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelega
             throw PropertyError.failure(cause: AXError.failure)
         } catch AXError.invalidUIElement {
             log.debug("Got invalidUIElement for element \(axElement) "
-                    + "when attempting to write \(attribute)")
+                + "when attempting to write \(attribute)")
             throw PropertyError.invalidObject(cause: AXError.invalidUIElement)
-        } catch let error {
+        } catch {
             unexpectedError(error)
             throw PropertyError.invalidObject(cause: error)
         }
     }
 
     func initialize() -> Promise<T?> {
-        return initPromise.map { dict in
+        initPromise.map { dict in
             guard let value = dict[self.attribute] else {
                 return nil
             }
@@ -88,7 +88,7 @@ class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelega
                 throw PropertyError.timeout(time: TimeInterval(time))
             default:
                 log.debug("Got error while initializing attribute \(self.attribute) "
-                        + "for element \(self.axElement)")
+                    + "for element \(self.axElement)")
                 throw PropertyError.invalidObject(cause: error)
             }
         }
@@ -100,6 +100,7 @@ class AXPropertyDelegate<T: Equatable, UIElement: UIElementType>: PropertyDelega
 protocol AXPropertyDelegateType {
     var attribute: AXSwift.Attribute { get }
 }
+
 extension AXPropertyDelegate: AXPropertyDelegateType {}
 
 protocol PropertyType {
@@ -107,6 +108,7 @@ protocol PropertyType {
     var delegate: Any { get }
     var initialized: Promise<Void>! { get }
 }
+
 extension Property: PropertyType {
     func issueRefresh() {
         refresh()
@@ -114,10 +116,10 @@ extension Property: PropertyType {
 }
 
 /// Asynchronously fetches all the element attributes.
-func fetchAttributes<UIElement: UIElementType>(_ attributeNames: [Attribute],
-                                               forElement axElement: UIElement,
-                                               after: Promise<Void>,
-                                               seal: Resolver<[Attribute: Any]>) {
+func fetchAttributes(_ attributeNames: [Attribute],
+                     forElement axElement: some UIElementType,
+                     after: Promise<Void>,
+                     seal: Resolver<[Attribute: Any]>) {
     // Issue a request in the background.
     after.done(on: .global()) {
         let attributes = try traceRequest(axElement, "getMultipleAttributes", attributeNames) {
@@ -132,7 +134,7 @@ func fetchAttributes<UIElement: UIElementType>(_ attributeNames: [Attribute],
 /// Returns a promise that resolves when all the provided properties are initialized.
 /// Adds additional error information for AXPropertyDelegates.
 func initializeProperties(_ properties: [PropertyType]) -> Promise<Void> {
-    let propertiesInitialized: [Promise<Void>] = Array(properties.map({ $0.initialized }))
+    let propertiesInitialized: [Promise<Void>] = Array(properties.map { $0.initialized })
     return when(fulfilled: propertiesInitialized)
 }
 
@@ -166,7 +168,7 @@ func traceRequest<T>(
     }())
     // TODO: if more than some threshold, log as info
 
-    if let error = error {
+    if let error {
         throw error
     }
     return result!

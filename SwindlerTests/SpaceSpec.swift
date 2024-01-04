@@ -1,6 +1,6 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
 @testable import Swindler
 

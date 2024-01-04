@@ -1,14 +1,14 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
 @testable import Swindler
 
 struct StubNSScreen: NSScreenType {
     var frame: CGRect
-    var visibleFrame: CGRect { return frame }
+    var visibleFrame: CGRect { frame }
     var deviceDescription: [NSDeviceDescriptionKey: Any] {
-        return [
+        [
             NSDeviceDescriptionKey("NSScreenNumber"): NSNumber(value: number as Int32)
         ]
     }
@@ -24,17 +24,16 @@ struct StubNSScreen: NSScreenType {
     }
 }
 
-public func ==<NSScreenT>(lhs: OSXScreenDelegate<NSScreenT>, rhs: OSXScreenDelegate<NSScreenT>)
--> Bool {
-    return lhs.equalTo(rhs)
+public func == <NSScreenT>(lhs: OSXScreenDelegate<NSScreenT>, rhs: OSXScreenDelegate<NSScreenT>)
+    -> Bool {
+    lhs.equalTo(rhs)
 }
+
 extension OSXScreenDelegate: Equatable {}
 
 class OSXSystemScreenDelegateSpec: QuickSpec {
     override func spec() {
-
         describe("handleScreenChange") {
-
             var screen1: OSXScreenDelegate<StubNSScreen>!
             var screen2: OSXScreenDelegate<StubNSScreen>!
             beforeEach {
@@ -116,8 +115,6 @@ class OSXSystemScreenDelegateSpec: QuickSpec {
                     expect(event.changedScreens.first).to(equal(Screen(delegate: screen1)))
                 }
             }
-
         }
-
     }
 }

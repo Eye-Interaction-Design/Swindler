@@ -93,6 +93,7 @@ public struct OfType<T: Equatable>: PropertyTypeSpec {
         }
         return to
     }
+
     public static func toOptionalType(_ from: T) -> T? { from }
 }
 
@@ -107,6 +108,7 @@ public struct OfDefaultedType<T>: PropertyTypeSpec where T: Equatable, T: Defaul
     public static func toPropertyType(_ from: T?) throws -> T {
         from ?? T.defaultValue()
     }
+
     public static func toOptionalType(_ from: T) -> T? { from }
 }
 
@@ -116,9 +118,9 @@ public struct OfDefaultedType<T>: PropertyTypeSpec where T: Equatable, T: Defaul
 public struct OfOptionalType<T: Equatable>: PropertyTypeSpec {
     public typealias NonOptionalType = T
     public typealias PropertyType = T?
-    public static func equal(_ lhs: T?, _ rhs: T?) -> Bool { return lhs == rhs }
-    public static func toPropertyType(_ from: T?) throws -> T? { return from }
-    public static func toOptionalType(_ from: T?) -> T? { return from }
+    public static func equal(_ lhs: T?, _ rhs: T?) -> Bool { lhs == rhs }
+    public static func toPropertyType(_ from: T?) throws -> T? { from }
+    public static func toOptionalType(_ from: T?) -> T? { from }
 }
 
 /// A property on a Swindler object.
@@ -146,7 +148,7 @@ public class Property<TypeSpec: PropertyTypeSpec> {
     fileprivate let backingStoreLock = NSLock()
 
     // Exposed for testing only.
-    var backgroundQueue: DispatchQueue = DispatchQueue.global(qos: .default)
+    var backgroundQueue: DispatchQueue = .global(qos: .default)
 
     // Property definer is responsible for ensuring that it is NOT used before this promise
     // resolves.
@@ -154,9 +156,9 @@ public class Property<TypeSpec: PropertyTypeSpec> {
     // Property definer can access the delegate they provided here
     fileprivate(set) var delegate: Any
 
-    init<Impl: PropertyDelegate, Notifier: PropertyNotifier>(
+    init<Impl: PropertyDelegate>(
         _ delegate: Impl,
-        notifier: Notifier
+        notifier: some PropertyNotifier
     ) where Impl.T == NonOptionalType {
         self.notifier = PropertyNotifierThunk(notifier)
         self.delegate = delegate
@@ -167,17 +169,17 @@ public class Property<TypeSpec: PropertyTypeSpec> {
 
     /// Use this initializer if there is an event associated with the property.
     convenience init<Impl: PropertyDelegate,
-                     Notifier: PropertyNotifier,
-                     Event: PropertyEventType,
-                     Object>(
+        Notifier: PropertyNotifier,
+        Event: PropertyEventType,
+        Object>(
         _ delegate: Impl,
         withEvent: Event.Type,
         receivingObject: Object.Type,
         notifier: Notifier
     ) where Impl.T == NonOptionalType,
-            Event.PropertyType == PropertyType,
-            Event.Object == Object,
-            Notifier.Object == Object {
+        Event.PropertyType == PropertyType,
+        Event.Object == Object,
+        Notifier.Object == Object {
         self.init(delegate, notifier: notifier)
         self.notifier = PropertyNotifierThunk(notifier,
                                               withEvent: Event.self,
@@ -185,7 +187,7 @@ public class Property<TypeSpec: PropertyTypeSpec> {
     }
 
     func initialize<Impl: PropertyDelegate>(_ delegate: Impl) -> Promise<Void>
-    where Impl.T == NonOptionalType {
+        where Impl.T == NonOptionalType {
         let (promise, seal) = Promise<Void>.pending()
         delegate.initialize().done { value in
             self.value_ = try TypeSpec.toPropertyType(value)
@@ -199,7 +201,7 @@ public class Property<TypeSpec: PropertyTypeSpec> {
 
     /// The value of the property.
     public var value: PropertyType {
-        return getValue()
+        getValue()
     }
 
     func getValue() -> PropertyType {
@@ -222,7 +224,7 @@ public class Property<TypeSpec: PropertyTypeSpec> {
         // Allow queueing up a refresh before initialization is complete, which means "assume the
         // value you will be initialized with is going to be stale". This is useful if an event is
         // received before fully initializing.
-        return initialized.map(on: backgroundQueue) { () -> (PropertyType, PropertyType) in
+        initialized.map(on: backgroundQueue) { () -> (PropertyType, PropertyType) in
             self.requestLock.lock()
             defer { self.requestLock.unlock() }
 
@@ -237,7 +239,7 @@ public class Property<TypeSpec: PropertyTypeSpec> {
             }
             return actual
         }.tap { result in
-            if case .rejected(let error) = result {
+            if case let .rejected(error) = result {
                 self.handleError(error)
             }
         }
@@ -269,8 +271,8 @@ public class Property<TypeSpec: PropertyTypeSpec> {
 /// A property that can be set. Writes happen asynchronously.
 public class WriteableProperty<TypeSpec: PropertyTypeSpec>: Property<TypeSpec> {
     // Due to a Swift bug I have to override this.
-    override init<Impl: PropertyDelegate, Notifier: PropertyNotifier>(
-        _ delegate: Impl, notifier: Notifier
+    override init<Impl: PropertyDelegate>(
+        _ delegate: Impl, notifier: some PropertyNotifier
     ) where Impl.T == NonOptionalType {
         super.init(delegate, notifier: notifier)
     }
@@ -278,20 +280,20 @@ public class WriteableProperty<TypeSpec: PropertyTypeSpec>: Property<TypeSpec> {
     /// The value of the property. Reading is instant and synchronous, but writing is asynchronous
     /// and the value will not be updated until the write is complete. Use `set` to retrieve a
     /// promise.
-    public override var value: PropertyType {
+    override public var value: PropertyType {
         get {
-            return super.value
+            super.value
         }
         set {
             // Unwrap the value, if it's an optional.
             guard let value = TypeSpec.toOptionalType(newValue) else {
                 log.warn("A property (of type \(PropertyType.self)) was set to nil; this has no "
-                       + "effect.")
+                    + "effect.")
                 return
             }
             set(value).catch { error in
                 log.error("Error while writing to property (of type \(PropertyType.self)): "
-                        + String(describing: error))
+                    + String(describing: error))
             }
         }
     }
@@ -301,7 +303,7 @@ public class WriteableProperty<TypeSpec: PropertyTypeSpec>: Property<TypeSpec> {
     /// - returns: A promise that resolves to the new _actual_ value of the property, once set.
     /// - throws: `PropertyError` (via Promise)
     public func set(_ newValue: NonOptionalType) -> Promise<PropertyType> {
-        return mutateWith() {
+        mutateWith() {
             try self.delegate_.writeValue(newValue)
             return newValue
         }
@@ -323,24 +325,24 @@ public class WriteableProperty<TypeSpec: PropertyTypeSpec>: Property<TypeSpec> {
                 return (oldValue, desired, actual)
             } catch let PropertyError.timeout(time) {
                 log.warn("A readback timed out (in \(time) seconds) after successfully writing a "
-                       + "property (of type \(PropertyType.self)). This can result in an "
-                       + "inconsistent property state in Swindler where ChangedEvents are marked "
-                       + "as external that are actually internal.")
+                    + "property (of type \(PropertyType.self)). This can result in an "
+                    + "inconsistent property state in Swindler where ChangedEvents are marked "
+                    + "as external that are actually internal.")
                 throw PropertyError.timeout(time: time)
             }
         }.map { (oldValue: PropertyType, desired: PropertyType, actual: PropertyType)
-                  -> PropertyType in
+            -> PropertyType in
             // Back on main thread.
             if !TypeSpec.equal(actual, oldValue) {
                 // If the new value is not the desired value, then _something_ external interfered.
                 // That something could be the user, the application, or the operating system.
                 // Therefore we mark the event as external.
-                let external = false; //!TypeSpec.equal(actual, desired)
+                let external = false //! TypeSpec.equal(actual, desired)
                 self.notifier.notify?(external, oldValue, actual)
             }
             return actual
         }.tap { result in
-            if case .rejected(let error) = result {
+            if case let .rejected(error) = result {
                 self.handleError(error)
             }
         }
@@ -364,16 +366,14 @@ struct PropertyDelegateThunk<TypeSpec: PropertyTypeSpec> {
     let readValue_: () throws -> PropertyType?
 
     func writeValue(_ newValue: PropertyType) throws { try writeValue_(newValue) }
-    func readValue() throws -> PropertyType? { return try readValue_() }
+    func readValue() throws -> PropertyType? { try readValue_() }
 }
 
 private struct PropertyNotifierThunk<TypeSpec: PropertyTypeSpec> {
     typealias PropertyType = TypeSpec.PropertyType
 
     // Will be nil if not initialized with an event type.
-    let notify: Optional<
-        (_ external: Bool, _ oldValue: PropertyType, _ newValue: PropertyType) -> Void
-    >
+    let notify: ((_ external: Bool, _ oldValue: PropertyType, _ newValue: PropertyType) -> Void)?
     let notifyInvalid: () -> Void
 
     init<Notifier: PropertyNotifier, Event: PropertyEventType, Object>(
@@ -389,7 +389,7 @@ private struct PropertyNotifierThunk<TypeSpec: PropertyTypeSpec> {
         }
     }
 
-    init<Notifier: PropertyNotifier>(_ wrapped: Notifier) {
+    init(_ wrapped: some PropertyNotifier) {
         weak var wrappedNotifier = wrapped
         self.notifyInvalid = { wrappedNotifier?.notifyInvalid() }
         self.notify = nil

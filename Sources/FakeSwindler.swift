@@ -13,7 +13,7 @@ import AXSwift
 import Cocoa
 import PromiseKit
 
-fileprivate typealias AppElement = EmittingTestApplicationElement
+private typealias AppElement = EmittingTestApplicationElement
 
 public class FakeState {
     fileprivate typealias Delegate =
@@ -22,7 +22,7 @@ public class FakeState {
     public static func initialize(screens: [FakeScreen] = [FakeScreen()]) -> Promise<FakeState> {
         let notifier = EventNotifier()
         let appObserver = FakeApplicationObserver()
-        let ssd = FakeSystemScreenDelegate(screens: screens.map{ $0.delegate })
+        let ssd = FakeSystemScreenDelegate(screens: screens.map { $0.delegate })
         let sst = FakeSystemSpaceTracker()
         let spaceObserver = OSXSpaceObserver(notifier, ssd, sst)
         return firstly {
@@ -98,17 +98,19 @@ public struct FakeApplicationBuilder {
         app.processId = pid
         return self
     }
+
     public func setBundleId(_ bundleId: String?) -> FakeApplicationBuilder {
         app.bundleId = bundleId
         return self
     }
+
     public func setHidden(_ hidden: Bool) -> FakeApplicationBuilder {
         app.isHidden = hidden
         return self
     }
 
     public func build() -> Promise<FakeApplication> {
-        return app.parent.delegate.addAppElement(app.element).map { delegate in
+        app.parent.delegate.addAppElement(app.element).map { delegate in
             self.app.delegate = delegate
             return self.app
         }
@@ -117,25 +119,24 @@ public struct FakeApplicationBuilder {
 
 public class FakeApplication {
     fileprivate typealias Delegate =
-        OSXApplicationDelegate<TestUIElement, AppElement, FakeObserver>;
+        OSXApplicationDelegate<TestUIElement, AppElement, FakeObserver>
 
     let parent: FakeState
 
-    public var application: Application {
-        get { return Application(delegate: delegate!)! }
-    }
+    public var application: Application { Application(delegate: delegate!)! }
 
     fileprivate(set) var processId: pid_t
     fileprivate(set) var bundleId: String?
 
     public var isHidden: Bool {
-        get { return try! element.attribute(.hidden)! }
+        get { try! element.attribute(.hidden)! }
         set { try! element.setAttribute(.hidden, value: newValue) }
     }
+
     public var mainWindow: FakeWindow? {
         get {
             guard let windowElement: EmittingTestWindowElement =
-                      try! element.attribute(.mainWindow) else {
+                try! element.attribute(.mainWindow) else {
                 return nil
             }
             return (windowElement.companion) as! FakeWindow?
@@ -144,10 +145,11 @@ public class FakeApplication {
             try! element.setAttribute(.mainWindow, value: newValue?.element as Any)
         }
     }
+
     public var focusedWindow: FakeWindow? {
         get {
             guard let windowElement: EmittingTestWindowElement =
-                      try! element.attribute(.focusedWindow) else {
+                try! element.attribute(.focusedWindow) else {
                 return nil
             }
             return (windowElement.companion) as! FakeWindow?
@@ -172,13 +174,14 @@ public class FakeApplication {
     }
 
     public func createWindow() -> FakeWindowBuilder {
-        return FakeWindowBuilder(parent: self)
+        FakeWindowBuilder(parent: self)
     }
 }
 
-public func ==(lhs: FakeApplication, rhs: FakeApplication) -> Bool {
-    return lhs.element == rhs.element
+public func == (lhs: FakeApplication, rhs: FakeApplication) -> Bool {
+    lhs.element == rhs.element
 }
+
 extension FakeApplication: Equatable {}
 
 public class FakeWindowBuilder {
@@ -191,12 +194,13 @@ public class FakeWindowBuilder {
     public func setTitle(_ title: String) -> FakeWindowBuilder { w.title = title; return self }
     public func setFrame(_ frame: CGRect) -> FakeWindowBuilder { w.frame = frame; return self }
     public func setPosition(_ pos: CGPoint) -> FakeWindowBuilder { w.frame = CGRect(origin: pos,
-    size: w.frame.size); return self }
+                                                                                    size: w.frame.size); return self }
     public func setSize(_ size: CGSize) -> FakeWindowBuilder { w.frame.size = size; return self }
     public func setMinimized(_ isMinimized: Bool = true) -> FakeWindowBuilder {
         w.isMinimized = isMinimized
         return self
     }
+
     public func setFullscreen(_ isFullscreen: Bool = true) -> FakeWindowBuilder {
         w.isFullscreen = isFullscreen
         return self
@@ -204,8 +208,8 @@ public class FakeWindowBuilder {
 
     public func build() -> Promise<FakeWindow> {
         // TODO schedule new window event
-        //w.parent.delegate!...
-        return w.parent.delegate.addWindowElement(w.element).map { delegate in
+        // w.parent.delegate!...
+        w.parent.delegate.addWindowElement(w.element).map { delegate in
             self.w.delegate = delegate
             return self.w
         }
@@ -216,26 +220,27 @@ public class FakeWindow: TestObject {
     fileprivate typealias Delegate = OSXWindowDelegate<TestUIElement, AppElement, FakeObserver>
 
     public let parent: FakeApplication
-    public var window: Window {
-        get { return Window(delegate: delegate!)! }
-    }
+    public var window: Window { Window(delegate: delegate!)! }
 
     let element: EmittingTestWindowElement
 
     public var title: String {
-        get { return try! element.attribute(.title)! }
+        get { try! element.attribute(.title)! }
         set { try! element.setAttribute(.title, value: newValue) }
     }
+
     public var frame: CGRect {
-        get { return invert(try! element.attribute(.frame)!) }
+        get { invert(try! element.attribute(.frame)!) }
         set { try! element.setAttribute(.frame, value: invert(newValue)) }
     }
+
     public var isMinimized: Bool {
-        get { return try! element.attribute(.minimized)! }
+        get { try! element.attribute(.minimized)! }
         set { try! element.setAttribute(.minimized, value: newValue) }
     }
+
     public var isFullscreen: Bool {
-        get { return try! element.attribute(.fullScreen)! }
+        get { try! element.attribute(.fullScreen)! }
         set { try! element.setAttribute(.fullScreen, value: newValue) }
     }
 
@@ -268,23 +273,23 @@ public class FakeWindow: TestObject {
     }
 }
 
-public func ==(lhs: FakeWindow, rhs: FakeWindow) -> Bool {
-    return lhs.element == rhs.element
+public func == (lhs: FakeWindow, rhs: FakeWindow) -> Bool {
+    lhs.element == rhs.element
 }
+
 extension FakeWindow: Equatable {}
 
 extension FakeWindow: CustomDebugStringConvertible {
     public var debugDescription: String {
-        return "FakeWindow(\"\(title.truncate(length: 30))\")"
+        "FakeWindow(\"\(title.truncate(length: 30))\")"
     }
 }
 
 public class FakeScreen {
     public var screen: Screen {
-        get {
-            return Screen(delegate: delegate)
-        }
+        Screen(delegate: delegate)
     }
+
     weak var state: FakeState?
     public var spaceId: Int? {
         get { delegate.spaceId }
@@ -304,6 +309,7 @@ public class FakeScreen {
     public init(frame: CGRect, applicationFrame: CGRect) {
         delegate = FakeScreenDelegate(frame: frame, applicationFrame: applicationFrame)
     }
+
     public convenience init(frame: CGRect, menuBarHeight: Int, dockHeight: Int) {
         let af = CGRect(x: frame.origin.x,
                         y: frame.origin.y + CGFloat(dockHeight),
@@ -311,9 +317,11 @@ public class FakeScreen {
                         height: frame.height - CGFloat(menuBarHeight + dockHeight))
         self.init(frame: frame, applicationFrame: af)
     }
+
     public convenience init(frame: CGRect) {
         self.init(frame: frame, menuBarHeight: 10, dockHeight: 50)
     }
+
     public convenience init() {
         self.init(frame: CGRect(x: 0, y: 0, width: 1920, height: 1080))
     }
@@ -327,7 +335,7 @@ protocol TestObject: AnyObject {
 
 class TestPropertyDelegate<T: Equatable, Object: TestObject>: PropertyDelegate {
     typealias Getter = (Object) -> T
-    typealias Setter = (Object, T) -> ()
+    typealias Setter = (Object, T) -> Void
 
     weak var object: Object?
     let getter: Getter
@@ -340,14 +348,14 @@ class TestPropertyDelegate<T: Equatable, Object: TestObject>: PropertyDelegate {
     }
 
     func initialize() -> Promise<T?> {
-        guard let object = object, object.isValid else {
+        guard let object, object.isValid else {
             return .value(nil)
         }
         return .value(getter(object))
     }
 
     func readValue() throws -> T? {
-        guard let object = object, object.isValid else {
+        guard let object, object.isValid else {
             // TODO make cause optional
             throw PropertyError.invalidObject(cause: AXError.invalidUIElement)
         }
@@ -355,7 +363,7 @@ class TestPropertyDelegate<T: Equatable, Object: TestObject>: PropertyDelegate {
     }
 
     func writeValue(_ newValue: T) throws {
-        guard let object = object, object.isValid else {
+        guard let object, object.isValid else {
             // TODO make cause optional
             throw PropertyError.invalidObject(cause: AXError.invalidUIElement)
         }

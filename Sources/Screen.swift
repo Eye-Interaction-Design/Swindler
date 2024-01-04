@@ -5,26 +5,27 @@ import PromiseKit
 
 /// A physical display.
 public final class Screen: Equatable, CustomDebugStringConvertible {
-    internal let delegate: ScreenDelegate
-    internal init(delegate: ScreenDelegate) {
+    let delegate: ScreenDelegate
+    init(delegate: ScreenDelegate) {
         self.delegate = delegate
     }
 
-    public var debugDescription: String { return delegate.debugDescription }
+    public var debugDescription: String { delegate.debugDescription }
 
     /// The frame defining the screen boundaries in global coordinates.
     /// -Note: x and y may be negative.
-    public var frame: CGRect { return delegate.frame }
+    public var frame: CGRect { delegate.frame }
 
     /// The frame defining the screen boundaries in global coordinates, excluding the menu bar and
     /// dock.
-    public var applicationFrame: CGRect { return delegate.applicationFrame }
+    public var applicationFrame: CGRect { delegate.applicationFrame }
 
     /// An integer uniquely representing the current space on this screen.
     public var spaceId: Int { delegate.spaceId ?? 0 }
 }
-public func ==(lhs: Screen, rhs: Screen) -> Bool {
-    return lhs.delegate.equalTo(rhs.delegate)
+
+public func == (lhs: Screen, rhs: Screen) -> Bool {
+    lhs.delegate.equalTo(rhs.delegate)
 }
 
 extension Screen: Hashable {
@@ -52,7 +53,7 @@ extension SystemScreenDelegate {
     }
 
     var maxY: CGFloat {
-        return calculateMaxY(screens)
+        calculateMaxY(screens)
     }
 }
 
@@ -124,7 +125,7 @@ final class FakeScreenDelegate: ScreenDelegate {
     func hash(into _: inout Hasher) {}
 
     var debugDescription: String {
-        return "FakeScreen(frame: \(frame), applicationFrame: \(applicationFrame))"
+        "FakeScreen(frame: \(frame), applicationFrame: \(applicationFrame))"
     }
 }
 
@@ -137,6 +138,7 @@ protocol NSScreenType {
 
     var displayName: String { get }
 }
+
 extension NSScreen: NSScreenType {
     /// The name for the display (usually, the manufacturer and model number).
     /// -Note: This is expensive to get, and should be cached in a stored property.
@@ -154,7 +156,7 @@ extension NSScreen: NSScreenType {
 }
 
 private func createDelegates() -> [OSXScreenDelegate<NSScreen>] {
-    return NSScreen.screens.map{ OSXScreenDelegate(nsScreen: $0) }
+    NSScreen.screens.map { OSXScreenDelegate(nsScreen: $0) }
 }
 
 class OSXSystemScreenDelegate: SystemScreenDelegate {
@@ -171,7 +173,7 @@ class OSXSystemScreenDelegate: SystemScreenDelegate {
         self.notifier = notifier
         lock_ = NSLock()
         delegates = createDelegates()
-        screens_ = delegates.map{ $0 as ScreenDelegate }
+        screens_ = delegates.map { $0 as ScreenDelegate }
 
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -198,7 +200,7 @@ class OSXSystemScreenDelegate: SystemScreenDelegate {
             lock_.lock()
             defer { lock_.unlock() }
             delegates = newScreens
-            screens_ = newScreens.map{ $0 as ScreenDelegate }
+            screens_ = newScreens.map { $0 as ScreenDelegate }
         }
 
         notifier?.notify(event)
@@ -207,7 +209,7 @@ class OSXSystemScreenDelegate: SystemScreenDelegate {
 
 func handleScreenChange<NSScreenT: NSScreenType>(newScreens: [OSXScreenDelegate<NSScreenT>],
                                                  oldScreens: [OSXScreenDelegate<NSScreenT>])
--> ScreenLayoutChangedEvent {
+    -> ScreenLayoutChangedEvent {
     var oldScreensById: [CGDirectDisplayID: OSXScreenDelegate<NSScreenT>] = Dictionary()
     for oldScreen in oldScreens {
         oldScreensById[oldScreen.directDisplayID] = oldScreen
@@ -229,7 +231,7 @@ func handleScreenChange<NSScreenT: NSScreenType>(newScreens: [OSXScreenDelegate<
         oldScreensById[newScreen.directDisplayID] = nil
 
         if newScreen.frame != oldScreen.frame
-        || newScreen.applicationFrame != oldScreen.applicationFrame {
+            || newScreen.applicationFrame != oldScreen.applicationFrame {
             changedScreens.append(newScreenWrapped)
         } else {
             unchangedScreens.append(newScreenWrapped)
@@ -272,26 +274,27 @@ final class OSXScreenDelegate<NSScreenT: NSScreenType>: ScreenDelegate {
         }
         return other.directDisplayID == directDisplayID
     }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(directDisplayID)
     }
 
-    lazy var displayName: String = { self.nsScreen.displayName }()
+    lazy var displayName: String = self.nsScreen.displayName
 
     var debugDescription: String {
-        return "\"\(displayName)\" \(frame)"
+        "\"\(displayName)\" \(frame)"
     }
 
     // The frame won't change during the delegate's lifetime because it gets recreated every time
     // there is a screen configuration change.
     let frame: CGRect
 
-    var applicationFrame: CGRect { return nsScreen.visibleFrame }
+    var applicationFrame: CGRect { nsScreen.visibleFrame }
 
     var native: NSScreen? { nsScreen as? NSScreen }
 }
 
-private func numberForScreen<NSScreenT: NSScreenType>(_ nsScreen: NSScreenT) -> CGDirectDisplayID {
+private func numberForScreen(_ nsScreen: some NSScreenType) -> CGDirectDisplayID {
     // Get the direct display ID. This is documented to always exist.
     let screenNumber = nsScreen.deviceDescription[NSDeviceDescriptionKey(kNSScreenNumber)]!
     return CGDirectDisplayID((screenNumber as! NSNumber).intValue)
@@ -316,24 +319,24 @@ private func infoForCGDisplay(_ displayID: CGDirectDisplayID, options: Int) -> [
     var service = IOIteratorNext(iter)
     while service != 0 {
         let info = IODisplayCreateInfoDictionary(service, IOOptionBits(options)).takeRetainedValue()
-                   as Dictionary as [AnyHashable: Any]
+            as Dictionary as [AnyHashable: Any]
 
         guard let cfVendorID = info[kDisplayVendorID] as! CFNumber?,
-            let cfProductID = info[kDisplayProductID] as! CFNumber? else {
+              let cfProductID = info[kDisplayProductID] as! CFNumber? else {
             log.warn("Missing vendor or product ID encountered when looping through screens")
             continue
         }
 
         var vendorID: CFIndex = 0, productID: CFIndex = 0
-        guard CFNumberGetValue(cfVendorID, .cfIndexType, &vendorID) &&
-            CFNumberGetValue(cfProductID, .cfIndexType, &productID) else {
+        guard CFNumberGetValue(cfVendorID, .cfIndexType, &vendorID),
+              CFNumberGetValue(cfProductID, .cfIndexType, &productID) else {
             log.warn("Unexpected failure unwrapping vendor or product ID while looping through "
-                   + "screens")
+                + "screens")
             continue
         }
 
-        if UInt32(vendorID) == CGDisplayVendorNumber(displayID) &&
-            UInt32(productID) == CGDisplayModelNumber(displayID) {
+        if UInt32(vendorID) == CGDisplayVendorNumber(displayID),
+           UInt32(productID) == CGDisplayModelNumber(displayID) {
             return info
         }
 

@@ -1,10 +1,10 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 class FakeSpec: QuickSpec {
     override func spec() {
@@ -19,7 +19,7 @@ class FakeSpec: QuickSpec {
                             .setTitle("I'm a test window")
                             .setPosition(CGPoint(x: 100, y: 100))
                             .build()
-                        }.done { fw -> () in
+                        }.done { fw in
                             fake = fw
                             done()
                         }.cauterize()
@@ -140,7 +140,7 @@ class FakeSpec: QuickSpec {
                 expect(fakeApp.application.focusedWindow.value).toEventually(equal(fakeWindow2.window))
             }
 
-            it("emits events when new windows are created") { () -> Promise<()> in
+            it("emits events when new windows are created") { () -> Promise<Void> in
                 var events: [WindowCreatedEvent] = []
                 fakeState.state.on { (event: WindowCreatedEvent) in
                     events.append(event)
@@ -218,7 +218,7 @@ class FakeSpec: QuickSpec {
                     expect(app.isHidden.value).toEventually(beTrue())
                 }
 
-                it("emits events when new applications are created") { () -> Promise<()> in
+                it("emits events when new applications are created") { () -> Promise<Void> in
                     var events: [ApplicationLaunchedEvent] = []
                     fakeState.state.on { (event: ApplicationLaunchedEvent) in
                         events.append(event)

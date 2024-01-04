@@ -1,14 +1,14 @@
-import Foundation
 import Cocoa
-import Quick
+import Foundation
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 class StubApplicationObserver: ApplicationObserverType {
-    var frontmostApplicationPID: pid_t? { return nil }
+    var frontmostApplicationPID: pid_t? { nil }
     func onFrontmostApplicationChanged(_ handler: @escaping () -> Void) {}
     func onApplicationLaunched(_ handler: @escaping (pid_t) -> Void) {}
     func onApplicationTerminated(_ handler: @escaping (pid_t) -> Void) {}
@@ -16,15 +16,14 @@ class StubApplicationObserver: ApplicationObserverType {
 
     typealias ApplicationElement = TestApplicationElement
     var allApps: [ApplicationElement] = []
-    func allApplications() -> [TestApplicationElement] { return allApps }
-    func appElement(forProcessID processID: pid_t) -> ApplicationElement? { return nil }
+    func allApplications() -> [TestApplicationElement] { allApps }
+    func appElement(forProcessID processID: pid_t) -> ApplicationElement? { nil }
 }
 
 class OSXStateDelegateSpec: QuickSpec {
     override func spec() {
-
         func initialize()
-        -> OSXStateDelegate<TestUIElement, TestApplicationElement, TestObserver, StubApplicationObserver> {
+            -> OSXStateDelegate<TestUIElement, TestApplicationElement, TestObserver, StubApplicationObserver> {
             initialize(StubApplicationObserver())
         }
 
@@ -66,8 +65,7 @@ class OSXStateDelegateSpec: QuickSpec {
                 _ elementObserver: Obs.Type,
                 apps: [TestApplicationElement]
             )
-                -> OSXStateDelegate<TestUIElement, TestApplicationElement, Obs, StubApplicationObserver>
-            {
+                -> OSXStateDelegate<TestUIElement, TestApplicationElement, Obs, StubApplicationObserver> {
                 let notifier = EventNotifier()
                 let screenDel = FakeSystemScreenDelegate(screens: [FakeScreen().delegate])
                 let observer = StubApplicationObserver()
@@ -87,7 +85,8 @@ class OSXStateDelegateSpec: QuickSpec {
 
                 _ = initializeUsingObserver(
                     MyTestObserver.self,
-                    apps: [TestApplicationElement(), TestApplicationElement()])
+                    apps: [TestApplicationElement(), TestApplicationElement()]
+                )
 
                 expect(MyTestObserver.numObservers)
                     .to(equal(2), description: "should be 2 observers")
@@ -95,7 +94,7 @@ class OSXStateDelegateSpec: QuickSpec {
 
             it("handles applications that cannot be watched") {
                 class MyTestObserver: TestObserver {
-                    fileprivate override func addNotification(_ notification: AXNotification,
+                    override fileprivate func addNotification(_ notification: AXNotification,
                                                               forElement: TestUIElement) throws {
                         throw AXError.cannotComplete
                     }
@@ -104,7 +103,6 @@ class OSXStateDelegateSpec: QuickSpec {
                 _ = initializeUsingObserver(MyTestObserver.self, apps: [TestApplicationElement()])
                 // test that it doesn't crash
             }
-
         }
 
         xit("doesn't leak memory") {
@@ -120,7 +118,7 @@ class OSXStateDelegateSpec: QuickSpec {
                 // the object from being freed until the closure is freed. This explicit closure
                 // avoids that issue.
                 func isNil() -> Bool {
-                    return stateDelegate == nil
+                    stateDelegate == nil
                 }
                 expect(isNil()).toEventually(beTrue())
             }
@@ -235,7 +233,6 @@ class OSXStateDelegateSpec: QuickSpec {
             }
 
             context("when set to an application") {
-
                 it("makes that application frontmost") {
                     let appObserver = FakeApplicationObserver()
                     let state = State(delegate: initializeWithApp(appObserver: appObserver))
@@ -245,7 +242,6 @@ class OSXStateDelegateSpec: QuickSpec {
                 }
 
                 context("when the system complies") {
-
                     it("returns the app in the promise") { () -> Promise<Void> in
                         let state = State(delegate: initializeWithApp())
                         return state.frontmostApplication.set(state.runningApplications.first!)
@@ -257,7 +253,6 @@ class OSXStateDelegateSpec: QuickSpec {
                     // pending("emits a FrontmostApplicationChangedEvent") {
                     //     // Need to be able to pass in a TestNotifier to test this (ideally).
                     // }
-
                 }
 
                 context("when the system does not change the frontmost application") {
@@ -271,9 +266,7 @@ class OSXStateDelegateSpec: QuickSpec {
                             }
                     }
                 }
-
             }
         }
-
     }
 }

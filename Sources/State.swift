@@ -17,7 +17,7 @@ public func initialize() -> Promise<State> {
         ssd,
         OSXSpaceObserver(notifier, ssd, OSXSystemSpaceTracker())
     ).map { delegate in
-       State(delegate: delegate)
+        State(delegate: delegate)
     }
 }
 
@@ -33,27 +33,27 @@ public final class State {
 
     /// The currently running applications.
     public var runningApplications: [Application] {
-        return delegate.runningApplications.map {Application(delegate: $0, stateDelegate: delegate)}
+        delegate.runningApplications.map { Application(delegate: $0, stateDelegate: delegate) }
     }
 
     /// The frontmost application.
     public var frontmostApplication: WriteableProperty<OfOptionalType<Application>> {
-        return delegate.frontmostApplication
+        delegate.frontmostApplication
     }
 
     /// All windows that we know about. Windows on spaces that we haven't seen yet aren't included.
     public var knownWindows: [Window] {
-        return delegate.knownWindows.compactMap {Window(delegate: $0)}
+        delegate.knownWindows.compactMap { Window(delegate: $0) }
     }
 
     /// The physical screens in the current display configuration.
     public var screens: [Screen] {
-        return delegate.systemScreens.screens.map {Screen(delegate: $0)}
+        delegate.systemScreens.screens.map { Screen(delegate: $0) }
     }
 
     /// The main screen, if any.
     public var mainScreen: Screen? {
-        return delegate.systemScreens.main.map {Screen(delegate: $0)}
+        delegate.systemScreens.main.map { Screen(delegate: $0) }
     }
 
     /// Calls `handler` when the specified `Event` occurs.
@@ -104,7 +104,7 @@ class EventNotifier {
         }
         // Wrap in a casting closure to preserve type information that gets erased in the
         // dictionary.
-        eventHandlers[notification]!.append({ handler($0 as! Event) })
+        eventHandlers[notification]!.append { handler($0 as! Event) }
     }
 
     func notify<Event: EventType>(_ event: Event) {
@@ -119,7 +119,7 @@ class EventNotifier {
 
 struct ApplicationObserver: ApplicationObserverType {
     var frontmostApplicationPID: pid_t? {
-        return NSWorkspace.shared.frontmostApplication?.processIdentifier
+        NSWorkspace.shared.frontmostApplication?.processIdentifier
     }
 
     func onFrontmostApplicationChanged(_ handler: @escaping () -> Void) {
@@ -197,7 +197,7 @@ struct ApplicationObserver: ApplicationObserverType {
     }
 
     func appElement(forProcessID processID: pid_t) -> ApplicationElement? {
-        return AXSwift.Application(forProcessID: processID)
+        AXSwift.Application(forProcessID: processID)
     }
 }
 
@@ -210,8 +210,7 @@ final class OSXStateDelegate<
 >: StateDelegate where
     Observer.UIElement == UIElement,
     ApplicationElement.UIElement == UIElement,
-    ApplicationObserver.ApplicationElement == ApplicationElement
-{
+    ApplicationObserver.ApplicationElement == ApplicationElement {
     typealias WinDelegate = OSXWindowDelegate<UIElement, ApplicationElement, Observer>
     typealias AppDelegate = OSXApplicationDelegate<UIElement, ApplicationElement, Observer>
 
@@ -225,16 +224,18 @@ final class OSXStateDelegate<
 
     // For convenience/readability.
     fileprivate var applications: Dictionary<pid_t, AppDelegate>.Values {
-        return applicationsByPID.values
+        applicationsByPID.values
     }
 
     var runningApplications: [ApplicationDelegate] {
-        return applications.map({ $0 as ApplicationDelegate })
+        applications.map { $0 as ApplicationDelegate }
     }
+
     var frontmostApplication: WriteableProperty<OfOptionalType<Application>>!
     var knownWindows: [WindowDelegate] {
-        return applications.flatMap({ $0.knownWindows })
+        applications.flatMap { $0.knownWindows }
     }
+
     var systemScreens: SystemScreenDelegate
 
     var spaceIds: [Int]!
@@ -244,23 +245,23 @@ final class OSXStateDelegate<
     // TODO: retry instead of ignoring an app/window when timeouts are encountered during
     // initialization?
 
-    static func initialize<Screens: SystemScreenDelegate>(
+    static func initialize(
         _ notifier: EventNotifier,
         _ appObserver: ApplicationObserver,
-        _ screens: Screens,
+        _ screens: some SystemScreenDelegate,
         _ spaces: OSXSpaceObserver
     ) -> Promise<OSXStateDelegate> {
-        return firstly { () -> Promise<OSXStateDelegate> in
+        firstly { () -> Promise<OSXStateDelegate> in
             let delegate = OSXStateDelegate(notifier, appObserver, screens, spaces)
             return delegate.initialized.map { delegate }
         }
     }
 
     // TODO make private
-    init<Screens: SystemScreenDelegate>(
+    init(
         _ notifier: EventNotifier,
         _ appObserver: ApplicationObserver,
-        _ screens: Screens,
+        _ screens: some SystemScreenDelegate,
         _ spaces: OSXSpaceObserver
     ) {
         log.debug("Initializing Swindler")
@@ -272,10 +273,10 @@ final class OSXStateDelegate<
 
         let appPromises = appObserver.allApplications().map { appElement in
             watchApplication(appElement: appElement)
-            .asVoid()
-            .recover { error -> Void in
-                // drop errors
-            }
+                .asVoid()
+                .recover { error in
+                    // drop errors
+                }
         }
 
         let (propertyInitPromise, seal) = Promise<Void>.pending()
@@ -283,10 +284,12 @@ final class OSXStateDelegate<
             FrontmostApplicationPropertyDelegate(
                 appFinder: self,
                 appObserver: appObserver,
-                initPromise: propertyInitPromise),
+                initPromise: propertyInitPromise
+            ),
             withEvent: FrontmostApplicationChangedEvent.self,
             receivingObject: State.self,
-            notifier: self)
+            notifier: self
+        )
         let properties: [PropertyType] = [
             frontmostApplication
         ]
@@ -297,7 +300,7 @@ final class OSXStateDelegate<
         appObserver.onApplicationTerminated(onApplicationTerminate)
 
         notifier.on { [weak self] (event: SpaceWillChangeEvent) in
-            guard let self = self else { return }
+            guard let self else { return }
             log.info("Space changed: \(event.ids)")
             self.spaceIds = event.ids
 
@@ -322,7 +325,7 @@ final class OSXStateDelegate<
 
         // Must not allow frontmostApplication to initialize until the observer is in place.
         when(fulfilled: appPromises)
-            //.asVoid()
+            // .asVoid()
             .done { seal.fulfill(()) }
             .catch(seal.reject)
 
@@ -336,16 +339,16 @@ final class OSXStateDelegate<
     }
 
     func watchApplication(appElement: ApplicationElement) -> Promise<AppDelegate> {
-        return watchApplication(appElement: appElement, retry: 0)
+        watchApplication(appElement: appElement, retry: 0)
     }
 
     func watchApplication(appElement: ApplicationElement, retry: Int) -> Promise<AppDelegate> {
-        return AppDelegate.initialize(axElement: appElement, stateDelegate: self, notifier: notifier)
+        AppDelegate.initialize(axElement: appElement, stateDelegate: self, notifier: notifier)
             .map { appDelegate in
-                self.applicationsByPID[try appDelegate.axElement.pid()] = appDelegate
+                try self.applicationsByPID[appDelegate.axElement.pid()] = appDelegate
                 return appDelegate
             }
-            //.asVoid()
+            // .asVoid()
             .recover { error -> Promise<AppDelegate> in
                 if retry < 3 {
                     return self.watchApplication(appElement: appElement, retry: retry + 1)
@@ -359,14 +362,14 @@ final class OSXStateDelegate<
                     .flatMap { $0.bundleIdentifier }
                 let pidString = (pid == nil) ? "??" : String(pid!)
                 log.trace("Could not watch application \(bundleID ?? "") (pid=\(pidString)): "
-                         + String(describing: error))
+                    + String(describing: error))
                 throw error
             }
     }
 }
 
 extension OSXStateDelegate {
-    fileprivate func onApplicationLaunch(_ pid: pid_t) {
+    private func onApplicationLaunch(_ pid: pid_t) {
         guard let appElement = appObserver.appElement(forProcessID: pid) else {
             return
         }
@@ -376,7 +379,7 @@ extension OSXStateDelegate {
     }
 
     // Also used by FakeSwindler.
-    internal func addAppElement(_ appElement: ApplicationElement) -> Promise<AppDelegate> {
+    func addAppElement(_ appElement: ApplicationElement) -> Promise<AppDelegate> {
         watchApplication(appElement: appElement).map { appDelegate in
             self.notifier.notify(ApplicationLaunchedEvent(
                 external: true,
@@ -387,7 +390,7 @@ extension OSXStateDelegate {
         }
     }
 
-    fileprivate func onApplicationTerminate(_ pid: pid_t) {
+    private func onApplicationTerminate(_ pid: pid_t) {
         guard let appDelegate = self.applicationsByPID[pid] else {
             log.debug("Saw termination for unknown pid \(pid)")
             return
@@ -412,9 +415,9 @@ extension OSXStateDelegate: PropertyNotifier {
         newValue: Event.PropertyType
     ) where Event.Object == State {
         notifier.notify(Event(external: external,
-                        object: State(delegate: self),
-                        oldValue: oldValue,
-                        newValue: newValue))
+                              object: State(delegate: self),
+                              oldValue: oldValue,
+                              newValue: newValue))
     }
 
     /// Called when the underlying object has become invalid.
@@ -428,6 +431,7 @@ extension OSXStateDelegate: PropertyNotifier {
 protocol AppFinder: AnyObject {
     func findAppByPID(_ pid: pid_t) -> Application?
 }
+
 extension OSXStateDelegate: AppFinder {
     func findAppByPID(_ pid: pid_t) -> Application? {
         guard let appDelegate = applicationsByPID[pid] else { return nil }
@@ -467,7 +471,7 @@ private final class FrontmostApplicationPropertyDelegate<
 
     func initialize() -> Promise<Application?> {
         // No need to run in background, the call happens instantly.
-        return initPromise.map { self.readValue() }
+        initPromise.map { self.readValue() }
     }
 
     fileprivate func findAppByPID(_ pid: pid_t) -> Application? {

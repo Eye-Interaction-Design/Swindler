@@ -1,14 +1,13 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 class OSXApplicationDelegateInitializeSpec: QuickSpec {
     override func spec() {
-
         var notifier: TestNotifier!
         beforeEach {
             notifier = TestNotifier()
@@ -137,7 +136,6 @@ class OSXApplicationDelegateInitializeSpec: QuickSpec {
                                  notifier: notifier)
                     return expectToFail(promise)
                 }
-
             }
 
             context("when the observer throws an error during adding notifications") {
@@ -156,17 +154,13 @@ class OSXApplicationDelegateInitializeSpec: QuickSpec {
                                  notifier: notifier)
                     return expectToFail(promise)
                 }
-
             }
-
         }
-
     }
 }
 
 class OSXApplicationDelegateNotificationSpec: QuickSpec {
     override func spec() {
-
         describe("AXUIElement notifications") {
             var appElement: AdversaryApplicationElement!
             var notifier: TestNotifier!
@@ -203,7 +197,6 @@ class OSXApplicationDelegateNotificationSpec: QuickSpec {
             }
 
             context("when a property value changes right before observing it") {
-
                 context("for a regular property") {
                     it("is read correctly") {
                         appElement.attrs[.hidden] = false
@@ -233,7 +226,6 @@ class OSXApplicationDelegateNotificationSpec: QuickSpec {
                         expect(appDelegate.mainWindow.value).toEventuallyNot(beNil())
                     }
                 }
-
             }
 
             context("when a property value changes right after observing it") {
@@ -271,11 +263,9 @@ class OSXApplicationDelegateNotificationSpec: QuickSpec {
                         expect(appDelegate.mainWindow.value).toEventuallyNot(beNil())
                     }
                 }
-
             }
 
             context("when a property value changes right after reading it") {
-
                 context("for a regular property") {
                     it("is updated correctly") {
                         appElement.attrs[.hidden] = false
@@ -315,7 +305,6 @@ class OSXApplicationDelegateNotificationSpec: QuickSpec {
                         expect(appDelegate.mainWindow.value).toEventuallyNot(beNil())
                     }
                 }
-
             }
 
             describe("knownWindows") {
@@ -331,49 +320,46 @@ class OSXApplicationDelegateNotificationSpec: QuickSpec {
                 // before the fix.
 
                 context("when a window is created right after reading the windows attribute, but "
-                      + "the event comes before the read returns") {
-                    it("doesn't remove the window") {
-                        appElement.onFirstAttributeRead(.windows, onMainThread: false) { _ in
-                            performOnMainThread {
-                                appElement.windows.append(windowElement)
-                                observer?.emit(.windowCreated, forElement: windowElement)
+                    + "the event comes before the read returns") {
+                        it("doesn't remove the window") {
+                            appElement.onFirstAttributeRead(.windows, onMainThread: false) { _ in
+                                performOnMainThread {
+                                    appElement.windows.append(windowElement)
+                                    observer?.emit(.windowCreated, forElement: windowElement)
+                                }
+
+                                // Wait for event to be processed on main thread.
+                                Thread.sleep(forTimeInterval: 0.1)
+
+                                // Will return no windows.
                             }
 
-                            // Wait for event to be processed on main thread.
-                            Thread.sleep(forTimeInterval: 0.1)
-
-                            // Will return no windows.
+                            let appDelegate = initializeApp()
+                            expect(appDelegate.knownWindows).toEventually(haveCount(1))
                         }
-
-                        let appDelegate = initializeApp()
-                        expect(appDelegate.knownWindows).toEventually(haveCount(1))
                     }
-                }
 
                 context("when a window is created right before reading the windows attribute and "
-                      + "the event comes after reading") {
-                    it("doesn't create more than one window") {
-                        appElement.windows.append(windowElement) // before read
+                    + "the event comes after reading") {
+                        it("doesn't create more than one window") {
+                            appElement.windows.append(windowElement) // before read
 
-                        let appDelegate = initializeApp()
-                        waitUntil(appDelegate.knownWindows.count == 1)
-                        observer?.emit(.windowCreated, forElement: windowElement)
+                            let appDelegate = initializeApp()
+                            waitUntil(appDelegate.knownWindows.count == 1)
+                            observer?.emit(.windowCreated, forElement: windowElement)
 
-                        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
+                            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
 
-                        expect(appDelegate.knownWindows).to(haveCount(1))
+                            expect(appDelegate.knownWindows).to(haveCount(1))
+                        }
                     }
-                }
-
             }
         }
-
     }
 }
 
 class OSXApplicationDelegateSpec: QuickSpec {
     override func spec() {
-
         var appDelegate: OSXApplicationDelegate<
             TestUIElement, AdversaryApplicationElement, FakeObserver
         >!
@@ -424,16 +410,15 @@ class OSXApplicationDelegateSpec: QuickSpec {
             return (windowDelegate as! WinDelegate?)?.axElement
         }
         func getWindowElementForWindow(_ window: Window?) -> TestUIElement? {
-            return getWindowElement(window?.delegate)
+            getWindowElement(window?.delegate)
         }
 
         describe("knownWindows") {
             func getWindowElements(_ windows: [WindowDelegate]) -> [TestUIElement] {
-                return windows.map({ getWindowElement($0)! })
+                windows.map { getWindowElement($0)! }
             }
 
             context("right after initialization") {
-
                 context("when there are no windows") {
                     it("is empty") {
                         expect(appDelegate.knownWindows).to(beEmpty())
@@ -464,11 +449,9 @@ class OSXApplicationDelegateSpec: QuickSpec {
                             .toNot(contain(invalidWindowElement))
                     }
                 }
-
             }
 
             context("when a new window is created") {
-
                 it("adds the window") {
                     let windowElement = createWindow()
                     expect(getWindowElements(appDelegate.knownWindows))
@@ -483,11 +466,9 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     waitUntil(getWindowElements(appDelegate.knownWindows).contains(windowElement2))
                     expect(getWindowElements(appDelegate.knownWindows)).to(contain(windowElement1))
                 }
-
             }
 
             context("when a window is destroyed") {
-
                 it("removes the window") {
                     let windowElement = createWindow(emitEvent: false)
                     initializeApp()
@@ -506,14 +487,12 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     waitUntil(!getWindowElements(appDelegate.knownWindows).contains(windowElement1))
                     expect(getWindowElements(appDelegate.knownWindows)).to(contain(windowElement2))
                 }
-
             }
         }
 
         // mainWindow is quite a bit more complicated than other properties, so we explicitly test
         // it here.
         describe("mainWindow") {
-
             context("when there is no initial main window") {
                 it("initially equals nil") {
                     expect(appElement.attrs[.mainWindow]).to(beNil())
@@ -606,27 +585,26 @@ class OSXApplicationDelegateSpec: QuickSpec {
                 }
 
                 context("and the passed application element doesn't equal our stored application "
-                      + "element") {
-                    // Finder does this.
-                    it("becomes nil") {
-                        let otherAppElement = TestUIElement()
-                        otherAppElement.processID = appElement.processID
-                        otherAppElement.attrs = appElement.attrs
-                        assert(appElement != otherAppElement)
+                    + "element") {
+                        // Finder does this.
+                        it("becomes nil") {
+                            let otherAppElement = TestUIElement()
+                            otherAppElement.processID = appElement.processID
+                            otherAppElement.attrs = appElement.attrs
+                            assert(appElement != otherAppElement)
 
-                        appElement.attrs[.mainWindow] = nil
-                        observer.doEmit(.mainWindowChanged,
-                                        watchedElement: appElement,
-                                        passedElement: otherAppElement)
-                        expect(appDelegate.mainWindow.value).toEventually(beNil())
+                            appElement.attrs[.mainWindow] = nil
+                            observer.doEmit(.mainWindowChanged,
+                                            watchedElement: appElement,
+                                            passedElement: otherAppElement)
+                            expect(appDelegate.mainWindow.value).toEventually(beNil())
+                        }
                     }
-                }
 
                 // TODO: timeout on reading .role
             }
 
             context("when a window is assigned") {
-
                 var windowElement: TestWindowElement!
                 var windowDelegate: WindowDelegate!
                 var setPromise: Promise<Window?>!
@@ -653,7 +631,6 @@ class OSXApplicationDelegateSpec: QuickSpec {
                             expect(newMainWindow?.delegate.equalTo(windowDelegate)).to(beTrue())
                         }
                     }
-
                 }
 
                 context("when the app refuses to make the window main") {
@@ -672,9 +649,7 @@ class OSXApplicationDelegateSpec: QuickSpec {
                             expect(newMainWindow).to(beNil())
                         }
                     }
-
                 }
-
             }
 
             context("when a new window becomes main then closes before reading the attribute") {
@@ -686,7 +661,7 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     let closingWindowElement = createWindow(emitEvent: false)
                     closingWindowElement.throwInvalid = true
 
-                    appElement.windows = appElement.windows.filter({ $0 != closingWindowElement })
+                    appElement.windows = appElement.windows.filter { $0 != closingWindowElement }
                     appElement.attrs[.mainWindow] = lastingWindowElement
                     lastingWindowElement.attrs[.main] = true
 
@@ -719,7 +694,7 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     appElement.attrs[.mainWindow] = closingWindowElement
 
                     appElement.onFirstAttributeRead(.mainWindow) { _ in
-                        appElement.windows = appElement.windows.filter {$0 != closingWindowElement}
+                        appElement.windows = appElement.windows.filter { $0 != closingWindowElement }
                         appElement.attrs[.mainWindow] = lastingWindowElement
                         lastingWindowElement.attrs[.main] = true
                         observer.emit(.uiElementDestroyed, forElement: closingWindowElement)
@@ -736,17 +711,15 @@ class OSXApplicationDelegateSpec: QuickSpec {
                         guard let event = notifier
                             .getEventsOfType(ApplicationMainWindowChangedEvent.self)
                             .last else {
-                                return nil
-                            }
+                            return nil
+                        }
                         return getWindowElementForWindow(event.newValue) as! TestWindowElement?
                     }.toEventually(equal(lastingWindowElement))
                 }
             }
-
         }
 
         describe("focusedWindow") {
-
             context("when there is no initial focused window") {
                 it("equals nil") {
                     expect(appElement.attrs[.focusedWindow]).to(beNil())
@@ -788,7 +761,6 @@ class OSXApplicationDelegateSpec: QuickSpec {
                         expect(getWindowElementForWindow(event.newValue)).to(equal(windowElement))
                     }
                 }
-
             }
         }
 
@@ -806,7 +778,6 @@ class OSXApplicationDelegateSpec: QuickSpec {
                 it("emits ApplicationIsHiddenChangedEvent") {
                     notifier.expectEvent(ApplicationIsHiddenChangedEvent.self)
                 }
-
             }
 
             context("when an application unhides") {
@@ -824,12 +795,10 @@ class OSXApplicationDelegateSpec: QuickSpec {
                 it("emits ApplicationIsHiddenChangedEvent") {
                     notifier.expectEvent(ApplicationIsHiddenChangedEvent.self)
                 }
-
             }
         }
 
         describe("equalTo") {
-
             it("returns true for identical app delegates") {
                 expect(appDelegate.equalTo(appDelegate)).to(beTrue())
             }
@@ -839,14 +808,13 @@ class OSXApplicationDelegateSpec: QuickSpec {
                 return OSXApplicationDelegate<
                     TestUIElement, AdversaryApplicationElement, FakeObserver
                 >
-                    .initialize(axElement: otherAppElement,
-                                stateDelegate: StubStateDelegate(),
-                                notifier: notifier)
-                    .done { otherAppDelegate in
-                        expect(appDelegate.equalTo(otherAppDelegate)).to(beFalse())
-                    }
+                .initialize(axElement: otherAppElement,
+                            stateDelegate: StubStateDelegate(),
+                            notifier: notifier)
+                .done { otherAppDelegate in
+                    expect(appDelegate.equalTo(otherAppDelegate)).to(beFalse())
+                }
             }
-
         }
 
         context("when a window is created") {
@@ -871,7 +839,6 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     expect(event.external).to(beTrue())
                 }
             }
-
         }
 
         context("when a window is destroyed") {
@@ -893,8 +860,6 @@ class OSXApplicationDelegateSpec: QuickSpec {
                     expect(event.external).to(beTrue())
                 }
             }
-
         }
-
     }
 }

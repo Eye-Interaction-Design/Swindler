@@ -1,15 +1,14 @@
 import Cocoa
-import Quick
 import Nimble
+import Quick
 
-@testable import Swindler
 import AXSwift
 import PromiseKit
+@testable import Swindler
 
 /// Tests that integrate the whole OS X driver instead of testing just one piece.
 class OSXDriverSpec: QuickSpec {
     override func spec() {
-
         // Set up a state with a single application containing a single window.
         var appElement: EmittingTestApplicationElement!
         var windowElement: EmittingTestWindowElement!
@@ -59,11 +58,9 @@ class OSXDriverSpec: QuickSpec {
                 expect(state.knownWindows).toEventually(haveCount(2))
                 expect(callbacks).to(equal(1), description: "callback should be called once")
             }
-
         }
 
         context("when a window is destroyed") {
-
             it("emits WindowDestroyedEvent") {
                 var callbacks = 0
                 state.on { (_: WindowDestroyedEvent) in
@@ -78,11 +75,9 @@ class OSXDriverSpec: QuickSpec {
                 windowElement.destroy()
                 expect(state.knownWindows).toEventually(haveCount(0))
             }
-
         }
 
         context("when a window property changes") {
-
             it("emits a ChangedEvent") {
                 var callbacks = 0
                 state.on { (_: WindowFrameChangedEvent) in
@@ -108,8 +103,6 @@ class OSXDriverSpec: QuickSpec {
                 expect(callbacks2)
                     .toEventually(equal(1), description: "callback2 should be called once")
             }
-
         }
-
     }
 }

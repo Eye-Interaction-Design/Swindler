@@ -8,8 +8,8 @@
 
 import AXSwift
 import Cocoa
-import Swindler
 import PromiseKit
+import Swindler
 
 func dispatchAfter(delay: TimeInterval, block: DispatchWorkItem) {
     let time = DispatchTime.now() + delay
