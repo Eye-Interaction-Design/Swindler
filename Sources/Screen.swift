@@ -22,6 +22,12 @@ public final class Screen: Equatable, CustomDebugStringConvertible {
 
     /// An integer uniquely representing the current space on this screen.
     public var spaceId: Int { delegate.spaceId ?? 0 }
+
+    public var native: NSScreen? { delegate.native }
+
+    public var currentSpace: Space? {
+        Space.current(for: self.native!)
+    }
 }
 
 public func == (lhs: Screen, rhs: Screen) -> Bool {
@@ -291,7 +297,7 @@ final class OSXScreenDelegate<NSScreenT: NSScreenType>: ScreenDelegate {
 
     var applicationFrame: CGRect { nsScreen.visibleFrame }
 
-    var native: NSScreen? { nsScreen as? NSScreen }
+    public var native: NSScreen? { nsScreen as? NSScreen }
 }
 
 private func numberForScreen(_ nsScreen: some NSScreenType) -> CGDirectDisplayID {

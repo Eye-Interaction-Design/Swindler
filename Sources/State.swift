@@ -233,7 +233,7 @@ final class OSXStateDelegate<
 
     var frontmostApplication: WriteableProperty<OfOptionalType<Application>>!
     var knownWindows: [WindowDelegate] {
-        applications.flatMap { $0.knownWindows }
+        (applications.flatMap { $0.knownWindows })
     }
 
     var systemScreens: SystemScreenDelegate

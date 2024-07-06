@@ -1,4 +1,166 @@
+import AppKit
 import Cocoa
+import CoreGraphics
+
+private let SLSScreenIDKey = "Display Identifier"
+private let SLSSpaceIDKey = "ManagedSpaceID"
+private let SLSSpacesKey = "Spaces"
+private let displaySpacesInfo = SLSCopyManagedDisplaySpaces(SLSMainConnectionID()).takeRetainedValue() as NSArray
+
+public class Space: NSObject {
+    private static let connectionID = SLSMainConnectionID()
+
+    public static func all() -> [Space] {
+        var spaces: [Space] = []
+
+        let displaySpacesInfo = SLSCopyManagedDisplaySpaces(connectionID).takeRetainedValue() as NSArray
+
+        for displaySpacesInfo in displaySpacesInfo {
+            guard let spacesInfo = displaySpacesInfo as? [String: AnyObject] else {
+                continue
+            }
+
+            guard let identifiers = spacesInfo[SLSSpacesKey] as? [[String: AnyObject]] else {
+                continue
+            }
+
+            for item in identifiers {
+                guard let identifier = item[SLSSpaceIDKey] as? uint64 else {
+                    continue
+                }
+
+                spaces.append(Space(identifier: identifier))
+            }
+        }
+
+        return spaces
+    }
+
+    public static func at(_ index: Int) -> Space? {
+        all()[index]
+    }
+
+    public static func getById(_ id: UInt64) -> Space? {
+        all().filter { $0.identifier == id }.first
+    }
+
+    public static func getByWindowId(_ windowId: CGWindowID) -> Space? {
+        let identifiers = SLSCopySpacesForWindows(connectionID,
+                                                  7,
+                                                  [windowId] as CFArray).takeRetainedValue() as NSArray
+
+        for space in all() {
+            if identifiers.contains(space.identifier) {
+                return space
+            }
+        }
+
+        return nil
+    }
+
+    public static func get(for window: Window) -> Space? {
+        getByWindowId(window.identifier)
+    }
+
+    public static func active() -> Space {
+        Space(identifier: SLSGetActiveSpace(connectionID))
+    }
+
+    public static func current(for screen: NSScreen) -> Space? {
+        let identifier = SLSManagedDisplayGetCurrentSpace(connectionID, screen.identifier as CFString)
+
+        return Space(identifier: identifier)
+    }
+
+    init(identifier: uint64) {
+        self.identifier = identifier
+    }
+
+    override public func isEqual(_ object: Any?) -> Bool {
+        guard let space = object as? Self else {
+            return false
+        }
+
+        return identifier == space.identifier
+    }
+
+    public var identifier: uint64
+
+    public var isNormal: Bool {
+        SLSSpaceGetType(Self.connectionID, identifier) == 0
+    }
+
+    public var isFullscreen: Bool {
+        SLSSpaceGetType(Self.connectionID, identifier) == 4
+    }
+
+    public func screens() -> [NSScreen] {
+        if !NSScreen.screensHaveSeparateSpaces {
+            return NSScreen.screens
+        }
+
+        let displaySpacesInfo = SLSCopyManagedDisplaySpaces(Self.connectionID).takeRetainedValue() as NSArray
+
+        var screen: NSScreen?
+
+        for displaySpacesInfo in displaySpacesInfo {
+            guard let spacesInfo = displaySpacesInfo as? [String: AnyObject] else {
+                continue
+            }
+
+            guard let screenIdentifier = spacesInfo[SLSScreenIDKey] as? String else {
+                continue
+            }
+
+            guard let identifiers = spacesInfo[SLSSpacesKey] as? [[String: AnyObject]] else {
+                continue
+            }
+
+            for item in identifiers {
+                guard let identifier = item[SLSSpaceIDKey] as? uint64 else {
+                    continue
+                }
+
+                if identifier == self.identifier {
+                    screen = NSScreen.screen(for: screenIdentifier)
+                }
+            }
+        }
+
+        if screen != nil {
+            return [screen!]
+        } else {
+            return []
+        }
+    }
+
+    public func contains(window: Window) -> Bool {
+        let spaceIDs = SLSCopySpacesForWindows(Self.connectionID,
+                                               7,
+                                               [window.identifier] as CFArray).takeRetainedValue() as NSArray
+        return spaceIDs.contains(identifier)
+    }
+
+    public func getWindows(on state: State) -> [Window] {
+        state.knownWindows.filter { $0.space?.identifier == self.identifier }
+    }
+
+    public func addWindows(_ windows: [Window]) {
+        SLSAddWindowsToSpaces(Self.connectionID, windows.map(\.identifier) as CFArray, [identifier] as CFArray)
+    }
+
+    public func removeWindows(_ windows: [Window]) {
+        SLSRemoveWindowsFromSpaces(Self.connectionID, windows.map(\.identifier) as CFArray, [identifier] as CFArray)
+    }
+
+    public func moveWindows(_ windows: [Window]) {
+        SLSMoveWindowsToManagedSpace(Self.connectionID, windows.map(\.identifier) as CFArray, identifier)
+    }
+
+    public func moveWindowsById(_ windowIds: [CGWindowID]) {
+        SLSMoveWindowsToManagedSpace(Self.connectionID, windowIds as CFArray, identifier)
+    }
+}
 
 class OSXSpaceObserver: NSObject, NSWindowDelegate {
     private var trackers: [Int: SpaceTracker] = [:]
@@ -38,7 +200,7 @@ class OSXSpaceObserver: NSObject, NSWindowDelegate {
     ///
     /// Used during initialization.
     func emitSpaceWillChangeEvent() {
-        guard let ssd = ssd else { return }
+        guard let ssd else { return }
         let visible = sst.visibleIds()
         log.debug("spaceChanged: visible=\(visible)")
 
@@ -75,7 +237,7 @@ class OSXSpaceObserver: NSObject, NSWindowDelegate {
 
 protocol SystemSpaceTracker {
     /// Installs a handler to be called when the current space changes.
-    func onSpaceChanged(_ handler: @escaping () -> ())
+    func onSpaceChanged(_ handler: @escaping () -> Void)
 
     /// Creates a tracker for the current space on the given screen.
     func makeTracker(_ screen: ScreenDelegate) -> SpaceTracker
@@ -85,7 +247,7 @@ protocol SystemSpaceTracker {
 }
 
 class OSXSystemSpaceTracker: SystemSpaceTracker {
-    func onSpaceChanged(_ handler: @escaping () -> ()) {
+    func onSpaceChanged(_ handler: @escaping () -> Void) {
         let sharedWorkspace = NSWorkspace.shared
         let notificationCenter = sharedWorkspace.notificationCenter
         notificationCenter.addObserver(
@@ -115,15 +277,16 @@ class OSXSpaceTracker: NSObject, NSWindowDelegate, SpaceTracker {
     var id: Int { win.windowNumber }
 
     init(_ screen: ScreenDelegate) {
-        //win = NSWindow(contentViewController: NSViewController(nibName: nil, bundle: nil))
+        // win = NSWindow(contentViewController: NSViewController(nibName: nil, bundle: nil))
         // Size must be non-zero to receive occlusion state events.
-        let rect = /*NSRect.zero */NSRect(x: 0, y: 0, width: 1, height: 1)
+        let rect = /* NSRect.zero */ NSRect(x: 0, y: 0, width: 1, height: 1)
         win = NSWindow(
             contentRect: rect,
-            styleMask: .borderless/*[.titled, .resizable, .miniaturizable]*/,
+            styleMask: .borderless /* [.titled, .resizable, .miniaturizable] */,
             backing: .buffered,
             defer: true,
-            screen: screen.native)
+            screen: screen.native
+        )
         win.isReleasedWhenClosed = false
         win.ignoresMouseEvents = true
         win.hasShadow = false
@@ -171,8 +334,8 @@ class OSXSpaceTracker: NSObject, NSWindowDelegate, SpaceTracker {
 class FakeSystemSpaceTracker: SystemSpaceTracker {
     init() {}
 
-    var spaceChangeHandler: Optional<() -> ()> = nil
-    func onSpaceChanged(_ handler: @escaping () -> ()) {
+    var spaceChangeHandler: (() -> Void)? = nil
+    func onSpaceChanged(_ handler: @escaping () -> Void) {
         spaceChangeHandler = handler
     }
 
@@ -197,5 +360,6 @@ class StubSpaceTracker: SpaceTracker {
         self.screen = screen
         self.id = id
     }
+
     func screen(_ ssd: SystemScreenDelegate) -> ScreenDelegate? { screen }
 }
