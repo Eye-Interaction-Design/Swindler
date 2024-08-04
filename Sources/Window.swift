@@ -159,7 +159,7 @@ final class OSXWindowDelegate<
 
     let axElement: UIElement
 
-    fileprivate(set) var isValid: Bool = true
+    fileprivate(set) var isValid = true
 
     fileprivate var watchedAxProperties: [AXSwift.AXNotification: [PropertyType]]!
 

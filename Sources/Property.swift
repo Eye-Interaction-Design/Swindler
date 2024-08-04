@@ -310,7 +310,7 @@ public class WriteableProperty<TypeSpec: PropertyTypeSpec>: Property<TypeSpec> {
     }
 
     final func mutateWith(f: @escaping () throws -> (NonOptionalType)) -> Promise<PropertyType> {
-        return Promise<Void>.value(()).map(on: backgroundQueue) {
+        Promise<Void>.value(()).map(on: backgroundQueue) {
             () throws -> (PropertyType, PropertyType, PropertyType) in
 
             self.requestLock.lock()
